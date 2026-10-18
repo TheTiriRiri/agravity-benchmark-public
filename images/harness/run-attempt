@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# run-attempt — dispatcher baked into the agrav-bench harness image.
+#
+# Single entry point for a benchmark attempt, and for the maintenance
+# commands Phase 0 sign-in and the runner's quota gate need to run through
+# the same pinned entrypoint instead of `docker run --entrypoint` overrides.
+#
+#   run-attempt --model <cli-model-id> [--effort <low|medium|high>]
+#               [--prompt-file /prompt.md] [--no-new-project]
+#     Runs one benchmark attempt in /workspace:
+#       agy -p "$PROMPT" \
+#           --model "$MODEL" [--effort "$EFFORT"] [--new-project] \
+#           --mode accept-edits --dangerously-skip-permissions \
+#           --output-format json --print-timeout "${TIMEOUT:-15m}"
+#     TIMEOUT is read from the environment; default 15m.
+#     --prompt-file defaults to /prompt.md, not /workspace/prompt.md — the
+#     prompt is mounted read-only outside the workspace so it never lands
+#     in the model's output.
+#     --no-new-project omits --new-project so agy runs in an existing codebase
+#     (brownfield track).
+#
+#     --effort is OPTIONAL, and passing it wrongly is a hard failure rather
+#     than something agy ignores. Verified against agy 1.1.26:
+#
+#       --model gemini-3.8-flash      --effort high  -> SUCCESS   (the intended form)
+#       --model gemini-3.8-flash-low  --effort low   -> SUCCESS
+#       --model gemini-3.8-flash-low  --effort high  -> ERROR, exit 1:
+#           --model gemini-3.8-flash-low conflicts with --effort=high
+#       --model claude-sonnet-4-6     --effort high  -> ERROR, exit 1:
+#           --effort is not supported for model "claude-sonnet-4-6"
+#
+#     So the effort level is part of the model id for the Gemini families and
+#     is not selectable at all for claude-sonnet-4-6, claude-opus-4-6-thinking
+#     and gpt-oss-120b-medium. Requiring --effort here — as this script did
+#     before Phase 0 — made those three models impossible to run at all.
+#
+#   run-attempt --login    Execs bare interactive `agy` for the Phase 0
+#                          OAuth sign-in.
+#   run-attempt --models   Runs `agy --output-format json models` (the
+#                          global flag must precede the subcommand; agy's
+#                          `models` subcommand does not itself accept it).
+#   run-attempt --usage    Runs `agy -p "/usage"` (the runner's quota gate).
+#   run-attempt --help     Prints this usage, exit 2.
+#
+# Exit codes: 2 usage error / --help, 3 prompt file not readable,
+# 5 unknown argument. Any other exit code is agy's own, passed through.
+#
+# stdout, stderr and the exit code are passed through untouched — the
+# runner parses stdout as the JSON envelope and greps stderr for
+# soft-deny lines. Everything run-attempt prints itself goes to stderr,
+# never stdout.
+#
+# Never pass a token or any other secret as an argument here. Credentials
+# arrive only via the mounted HOME (see docs/PLAN.md Phase 2) — this
+# script does not touch them.
+
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: run-attempt --model <cli-model-id> [--effort <low|medium|high>]
+                    [--prompt-file /prompt.md] [--no-new-project]
+       run-attempt --login
+       run-attempt --models
+       run-attempt --usage
+       run-attempt --help
+EOF
+  exit 2
+}
+
+MODEL=""
+EFFORT=""
+PROMPT_FILE="/prompt.md"
+NO_NEW_PROJECT="false"
+MODE="attempt"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --model)          [[ $# -ge 2 ]] || { echo "missing value for --model" >&2; usage; }; MODEL="$2"; shift 2 ;;
+    --effort)         [[ $# -ge 2 ]] || { echo "missing value for --effort" >&2; usage; }; EFFORT="$2"; shift 2 ;;
+    --prompt-file)    [[ $# -ge 2 ]] || { echo "missing value for --prompt-file" >&2; usage; }; PROMPT_FILE="$2"; shift 2 ;;
+    --no-new-project) NO_NEW_PROJECT="true"; shift ;;
+    --login)          MODE="login"; shift ;;
+    --models)         MODE="models"; shift ;;
+    --usage)          MODE="usage"; shift ;;
+    -h|--help)        usage ;;
+    *) echo "unknown arg: $1" >&2; exit 5 ;;
+  esac
+done
+
+case "$MODE" in
+  login)
+    exec agy
+    ;;
+  models)
+    # agy's `models` subcommand does not itself accept --output-format
+    # (its own --help lists only -h/--help); the global flag has to
+    # precede the subcommand. Verified against the live binary.
+    exec agy --output-format json models
+    ;;
+  usage)
+    exec agy -p "/usage"
+    ;;
+  attempt)
+    [[ -n "$MODEL" ]] || usage
+    EFFORT_ARGS=()
+    if [[ -n "$EFFORT" ]]; then
+      case "$EFFORT" in
+        low|medium|high) ;;
+        *) echo "invalid --effort: $EFFORT (want low|medium|high)" >&2; usage ;;
+      esac
+      EFFORT_ARGS=(--effort "$EFFORT")
+    fi
+    NEW_PROJECT_ARG=(--new-project)
+    if [[ "${NO_NEW_PROJECT:-false}" == "true" ]]; then
+      NEW_PROJECT_ARG=()
+    fi
+    [[ -r "$PROMPT_FILE" ]] || { echo "prompt not readable: $PROMPT_FILE" >&2; exit 3; }
+    PROMPT="$(cat "$PROMPT_FILE")"
+    exec agy -p "$PROMPT" \
+        --model "$MODEL" "${EFFORT_ARGS[@]}" "${NEW_PROJECT_ARG[@]}" \
+        --mode accept-edits --dangerously-skip-permissions \
+        --output-format json --print-timeout "${TIMEOUT:-15m}"
+    ;;
+  *) usage ;;
+esac

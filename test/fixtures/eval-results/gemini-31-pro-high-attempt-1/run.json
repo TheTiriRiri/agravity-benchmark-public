@@ -1,0 +1,14 @@
+{
+  "id": "gemini-31-pro-high",
+  "model": "gemini-3.1-pro",
+  "effort": "high",
+  "agyVersion": "1.1.26",
+  "image": "agrav-bench/harness:2026-09-05@sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "startedAt": "2026-09-04T18:40:00.000Z",
+  "durationMs": 900000,
+  "exitCode": 124,
+  "envelope": null,
+  "stderrTail": "agy: print timeout of 15m exceeded\n",
+  "softDenied": false,
+  "failureKind": "model"
+}

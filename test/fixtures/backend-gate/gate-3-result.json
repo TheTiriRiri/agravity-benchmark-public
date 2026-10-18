@@ -1,0 +1,29 @@
+{
+  "fingerprint": "6594c389a94e47955e87dd84bacd7b8c14cc5c36a97a00d96fa7055e0bbdb11d",
+  "recordedAt": "2026-10-18T23:36:27.637Z",
+  "image": "agrav-bench/harness:2026-10-04@sha256:c17480130daaf9571b25568faa348dbaea58e9bfc094061d7d693044d4579442",
+  "python": "Python 3.11.2",
+  "agy": "1.2.7",
+  "node": "v24.14.0",
+  "parts": [
+    "image",
+    "contract",
+    "stops",
+    "serve",
+    "screenshots",
+    "fuzz"
+  ],
+  "reference": {
+    "api-contract.test.ts": 24,
+    "planner-assignment.test.ts": 12,
+    "planner-ordering.test.ts": 11,
+    "planner-parts.test.ts": 11
+  },
+  "hardcodedPlan": {
+    "api-contract.test.ts": 24,
+    "planner-assignment.test.ts": 0,
+    "planner-ordering.test.ts": 1,
+    "planner-parts.test.ts": 2
+  },
+  "fuzzOracle": "9dfa46e680107ff58979c6fd04b22644f7c55c3b95674bf579157472ac224621"
+}

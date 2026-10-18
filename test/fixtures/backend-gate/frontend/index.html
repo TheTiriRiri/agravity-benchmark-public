@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gate 3a frontend</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 48px; background: #f4f5f7; color: #1d2330; }
+      main { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px 40px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+      h1 { margin-top: 0; font-size: 28px; }
+      code { background: #eef0f4; padding: 2px 6px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Gate 3a frontend</h1>
+      <p>A zero-dependency stand-in for an attempt's single-page app, served by <code>npm run dev</code>.</p>
+      <p>Backend health through the dev-server proxy: <strong id="health">asking…</strong></p>
+    </main>
+    <script type="module">
+      const target = document.getElementById("health");
+      try {
+        const reply = await fetch("/api/v1/health");
+        target.textContent = `${reply.status} ${await reply.text()}`;
+      } catch (error) {
+        target.textContent = `no answer (${error})`;
+      }
+    </script>
+  </body>
+</html>

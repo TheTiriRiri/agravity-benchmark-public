@@ -1,0 +1,15 @@
+Criterion,Score,Max,Notes
+Task completion time,15min 0s,N/A,15min 0s
+Test run,4.09.2026 23:40,N/A,4.09.2026 23:40
+Local build,0,1,"Not scored: run.json records a model failure (timeout)"
+API contract,0,2,"Not scored: run.json records a model failure (timeout)"
+Planner: assignment rules,0,2,"Not scored: run.json records a model failure (timeout)"
+Planner: ordering & determinism,0,1,"Not scored: run.json records a model failure (timeout)"
+Planner: parts & blocking,0,2,"Not scored: run.json records a model failure (timeout)"
+Frontend–API integration,0,1,"Not scored: run.json records a model failure (timeout)"
+Code structure,0,1,"Not scored: run.json records a model failure (timeout)"
+Tech stack & run contract,0,1,"Not scored: run.json records a model failure (timeout)"
+Manual testing,0,1,"Not scored: run.json records a model failure (timeout)"
+Consistent UI,0,1,"Not scored: run.json records a model failure (timeout)"
+Responsive design,0,1,"Not scored: run.json records a model failure (timeout)"
+Penalty,0,N/A,"No penalty applied; the attempt was not scored"

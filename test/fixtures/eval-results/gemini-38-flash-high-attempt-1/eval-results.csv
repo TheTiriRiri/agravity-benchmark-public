@@ -1,0 +1,15 @@
+Criterion,Score,Max,Notes
+Task completion time,5min 46s,N/A,5min 46s
+Test run,4.09.2026 22:31,N/A,4.09.2026 22:31
+Local build,1,1,"""npm run build"" succeeded, and the backend answered /api/v1/health"
+API contract,1.5,2,"18/24 passed; failed: fixture failure 1 | fixture failure 2 | fixture failure 3 | fixture failure 4 | fixture failure 5 | fixture failure 6; most failures at GET /schedule"
+Planner: assignment rules,1.5,2,"9/12 passed; failed: fixture failure 1 | fixture failure 2 | fixture failure 3; most failures at GET /schedule"
+Planner: ordering & determinism,1,1,"11/11 passed"
+Planner: parts & blocking,2,2,"11/11 passed"
+Frontend–API integration,1,1,"Every screen reads and writes through the live API"
+Code structure,0.5,1,"Planner in its own module, but each route repeats the validation"
+Tech stack & run contract,0.5,1,"FastAPI and React present, but the frontend hard-codes the API's origin"
+Manual testing,1,1,"Created, scheduled and completed a work order end to end"
+Consistent UI,1,1,"One layout, one type scale and one set of controls on every screen"
+Responsive design,1,1,"Lists and the schedule reflow down to 375px"
+Penalty,1,N/A,"A postinstall script downloads and runs a remote shell script"

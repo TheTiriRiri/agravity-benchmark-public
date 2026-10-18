@@ -1,0 +1,10 @@
+{
+  "files": [
+    { "file": "api-contract.test.ts", "row": "API contract", "max": 2, "tests": 29 },
+    { "file": "planner-assignment.test.ts", "row": "Planner: assignment rules", "max": 2, "tests": 12 },
+    { "file": "planner-ordering.test.ts", "row": "Planner: ordering & determinism", "max": 1, "tests": 11 },
+    { "file": "planner-parts.test.ts", "row": "Planner: parts & blocking", "max": 2, "tests": 11 },
+    { "file": "planner-crews-travel.test.ts", "row": "Planner: crews & travel", "max": 2, "tests": 10 },
+    { "file": "planner-split-preempt.test.ts", "row": "Planner: splitting & preemption", "max": 2, "tests": 13 }
+  ]
+}

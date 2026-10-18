@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2023",
+    "types": ["node"],
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["scripts/**/*.ts", "eval-attempts/metadata.ts", "test/**/*.ts", "benchmark/contract-tests/**/*.ts", "tracks/**/*.ts"],
+  "exclude": ["website", "eval-attempts/*-attempt-*/", "tracks/*/eval-attempts/", "tracks/*/base/", "node_modules"]
+}

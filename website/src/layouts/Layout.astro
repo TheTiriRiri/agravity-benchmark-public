@@ -1,0 +1,129 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'A one-shot coding benchmark of Antigravity CLI models. Each (model, effort) pair builds the same full-stack application and is scored against the same rubric.',
+} = Astro.props;
+
+const siteUrl = Astro.site ?? new URL('https://agrav-bench.pages.dev');
+const canonical = new URL(Astro.url.pathname, siteUrl).href;
+// Neutral placeholder card — see website/public/og.png.
+const ogImage = new URL('og.png', siteUrl).href;
+---
+
+<!doctype html>
+<html lang="en" class="dark" style="background-color: #0f172a; color: #e2e8f0;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="agrav-bench" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="agrav-bench - Antigravity CLI coding benchmark" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'agrav-bench',
+        alternateName: 'agrav-bench — Antigravity CLI coding benchmark',
+        url: siteUrl.href,
+        description:
+          'A reproducible one-shot coding benchmark comparing Antigravity CLI models on the same full-stack application task.',
+      })}
+    />
+  </head>
+  <body style="background-color: #0f172a; color: #e2e8f0;">
+    <nav class="bg-slate-900 border-b border-slate-700">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <a href="/" class="text-xl font-bold text-slate-100 hover:text-white">agrav-bench</a>
+          </div>
+          <!-- Desktop nav -->
+          <div class="hidden md:flex gap-8">
+            <a href="/" class="text-slate-300 hover:text-white font-medium">Results</a>
+            <a href="/benchmark" class="text-slate-300 hover:text-white font-medium">Benchmark</a>
+          </div>
+          <!-- Hamburger button (mobile only) -->
+          <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-300 hover:text-white" aria-label="Toggle menu">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path id="hamburger-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </nav>
+    <!-- Mobile menu panel -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-900 border-b border-slate-700">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-col">
+        <a href="/" class="py-3 text-slate-300 hover:text-white font-medium border-b border-slate-700">Results</a>
+        <a href="/benchmark" class="py-3 text-slate-300 hover:text-white font-medium border-b border-slate-700">Benchmark</a>
+      </div>
+    </div>
+
+    <main class="min-h-screen py-12" style="background-color: #0f172a;">
+      <slot />
+    </main>
+
+    <footer class="bg-slate-900 mt-12 border-t border-slate-700">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <p class="text-slate-400 text-center">
+          agrav-bench — Antigravity CLI benchmark results
+        </p>
+        <p class="text-slate-500 text-center text-sm mt-2">
+          <a href="/THIRD_PARTY_NOTICES.txt" class="underline hover:text-slate-300">Third-party notices</a>
+        </p>
+      </div>
+    </footer>
+    <script>
+      const btn = document.getElementById('mobile-menu-btn');
+      const menu = document.getElementById('mobile-menu');
+      const icon = document.getElementById('hamburger-icon');
+      if (btn && menu && icon) {
+        btn.addEventListener('click', () => {
+          const isOpen = !menu.classList.contains('hidden');
+          menu.classList.toggle('hidden');
+          icon.setAttribute('d', isOpen
+            ? 'M4 6h16M4 12h16M4 18h16'
+            : 'M6 18L18 6M6 6l12 12'
+          );
+        });
+      }
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  @import '../styles/global.css';
+</style>

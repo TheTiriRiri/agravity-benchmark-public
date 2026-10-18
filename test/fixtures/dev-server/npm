@@ -1,0 +1,228 @@
+#!/usr/bin/env node
+// A stand-in for `npm`, for `scripts/lib/dev-server.ts` and the tools built on
+// it (`test/dev-server.test.ts`, `test/serve-attempt.test.ts`). Put this
+// directory first on PATH. `npm run dev` becomes a small HTTP server that
+// prints a Vite-format banner, so `startVite` can be driven for real without
+// Vite, a network or a fixed port.
+//
+// It never binds a fixed port: every server listens on a RANDOM port and
+// prints that one, so nothing here can touch 5173 (or anything else) on the
+// machine running the tests.
+//
+// Steered by the environment:
+//   FAKE_NPM_STATE    state directory (required)
+//   FAKE_NPM_DEV      what `npm run dev` does:
+//                       plain          serves on localhost, prints Vite's plain banner
+//                       ansi           the same banner coloured, the port bolded
+//                       ipv4-404       serves on 127.0.0.1, answers 404, prints a 127.0.0.1 URL
+//                       silent         serves, prints no banner at all
+//                       early-exit     prints an error and exits 1
+//                       flaky          exits 1 the first time, serves like `plain` after
+//                       banner-no-http prints a URL whose port nothing listens on
+//                       stubborn       ignores SIGTERM, serves, prints no banner; writes
+//                                      `stubborn` in the state directory once the
+//                                      SIGTERM handler is in place
+//   FAKE_NPM_PING     ok | fail | hang                  what `npm ping` does
+//   FAKE_NPM_INSTALL  what `npm install` does:
+//                       ok        creates node_modules/ and exits 0
+//                       fail      prints npm's ETARGET error and exits 1
+//                       chatty    writes 2 MB to stdout, waiting until it is
+//                                 taken, then creates node_modules/ and exits 0
+//                       killed    SIGKILLs itself, as the OOM killer would
+//                       exit-137  exits 137, as npm does for a lifecycle script
+//                                 that crashed
+//                       hang      never finishes; SIGTERM ends it
+//
+// Written under $FAKE_NPM_STATE:
+//   calls.log   one line per invocation: its arguments
+//   pids.log    `<pid> <start time>` (field 22 of /proc/<pid>/stat) of every
+//               process this fake runs as or starts, so a test can prove none
+//               survives, and never signals a reused pid
+//   port        the port the last server listens on
+//   stubborn    written by `stubborn` once SIGTERM is ignored
+//   ping-cwd    the working directory `npm ping` ran in
+//
+// Every server also starts a `sleep` in its own process group, as Vite starts
+// esbuild, so a kill that reaches only the leader leaves a survivor to find.
+// Nothing here outlives MAX_LIFETIME_MS.
+//
+// `npm --fake-identity` prints `fake-npm`, so a test can prove PATH resolves
+// `npm` to this file and not to the real one.
+import { spawn } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { join } from "node:path";
+
+const MAX_LIFETIME_MS = 60_000;
+const argv = process.argv.slice(2);
+
+if (argv[0] === "--fake-identity") {
+  process.stdout.write("fake-npm\n");
+  process.exit(0);
+}
+
+const state = process.env.FAKE_NPM_STATE;
+if (!state || !existsSync(state)) {
+  process.stderr.write("fake npm: FAKE_NPM_STATE is not set to an existing directory\n");
+  process.exit(97);
+}
+
+function startOf(pid) {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19] ?? "?";
+  } catch {
+    return "?";
+  }
+}
+function record(pid) {
+  appendFileSync(join(state, "pids.log"), `${pid} ${startOf(pid)}\n`);
+}
+
+record(process.pid);
+appendFileSync(join(state, "calls.log"), `${argv.join(" ")}\n`);
+
+let child = null;
+const lifetime = setTimeout(() => {
+  child?.kill("SIGKILL");
+  process.exit(0);
+}, MAX_LIFETIME_MS);
+// Only a server or a hang keeps this process alive; the lifetime never does.
+lifetime.unref();
+
+/** A second process in this one's group, like Vite's esbuild service. */
+function startChild() {
+  child = spawn("sleep", ["60"], { stdio: "ignore" });
+  record(child.pid);
+}
+
+function banner(port, mode) {
+  if (mode === "ansi") {
+    const bold = (s) => `\x1b[1m${s}\x1b[22m`;
+    return [
+      "",
+      `  \x1b[32m${bold("VITE")} v6.4.3\x1b[39m  \x1b[2mready in \x1b[0m${bold("123")} ms\x1b[22m`,
+      "",
+      `  \x1b[32m➜\x1b[39m  ${bold("Local")}:   \x1b[36mhttp://localhost:${bold(port)}/\x1b[39m`,
+      `  \x1b[32m➜\x1b[39m  \x1b[2m${bold("Network")}: use \x1b[22m${bold("--host")}\x1b[2m to expose\x1b[22m`,
+      "",
+    ].join("\n");
+  }
+  const host = mode === "ipv4-404" ? "127.0.0.1" : "localhost";
+  return ["", "  VITE v6.4.3  ready in 123 ms", "", `  ➜  Local:   http://${host}:${port}/`, "  ➜  Network: use --host to expose", ""].join("\n");
+}
+
+function serve(mode) {
+  startChild();
+  const status = mode === "ipv4-404" ? 404 : 200;
+  const server = createServer((_request, response) => {
+    response.writeHead(status, { "content-type": "text/html" });
+    response.end("<!doctype html><title>fake dev server</title>");
+  });
+  server.listen(0, mode === "ipv4-404" ? "127.0.0.1" : "localhost", () => {
+    const port = server.address().port;
+    writeFileSync(join(state, "port"), String(port));
+    if (mode === "silent") return;
+    if (mode === "banner-no-http") {
+      // Name a port nothing listens on any more.
+      server.close(() => process.stdout.write(`${banner(port, "plain")}\n`));
+      setInterval(() => {}, 1000);
+      return;
+    }
+    process.stdout.write(`${banner(port, mode)}\n`);
+  });
+}
+
+function dev(mode) {
+  switch (mode) {
+    case "plain":
+    case "ansi":
+    case "ipv4-404":
+    case "silent":
+    case "banner-no-http":
+      serve(mode);
+      return;
+    case "stubborn":
+      // Only SIGKILL ends it, as a dev server stuck in its shutdown would be.
+      // Its `sleep` child does die on SIGTERM; the group lives on through this.
+      process.on("SIGTERM", () => {});
+      serve("silent");
+      writeFileSync(join(state, "stubborn"), `${process.pid}\n`);
+      return;
+    case "early-exit":
+      process.stderr.write("[vite] error: Cannot find module 'vite' — the frontend's dependencies are broken\n");
+      process.exit(1);
+      return;
+    case "flaky": {
+      const marker = join(state, "flaky-ran");
+      if (!existsSync(marker)) {
+        writeFileSync(marker, "");
+        process.stderr.write("[vite] error: failed to load config the first time\n");
+        process.exit(1);
+      }
+      serve("plain");
+      return;
+    }
+    default:
+      process.stderr.write(`fake npm: unknown FAKE_NPM_DEV ${JSON.stringify(mode)}\n`);
+      process.exit(96);
+  }
+}
+
+switch (argv[0]) {
+  case "run":
+    if (argv[1] !== "dev") {
+      process.stderr.write(`fake npm: unexpected run ${argv[1]}\n`);
+      process.exit(98);
+    }
+    dev(process.env.FAKE_NPM_DEV ?? "plain");
+    break;
+  case "ping": {
+    writeFileSync(join(state, "ping-cwd"), process.cwd());
+    const mode = process.env.FAKE_NPM_PING ?? "ok";
+    if (mode === "ok") {
+      process.stderr.write("npm notice PING https://registry.npmjs.org/\nnpm notice PONG 12ms\n");
+      process.exit(0);
+    }
+    if (mode === "fail") {
+      process.stderr.write("npm error code ENOTFOUND\n");
+      process.exit(1);
+    }
+    startChild();
+    setInterval(() => {}, 1000);
+    break;
+  }
+  case "install":
+    switch (process.env.FAKE_NPM_INSTALL ?? "ok") {
+      case "ok":
+        mkdirSync(join(process.cwd(), "node_modules"), { recursive: true });
+        process.exit(0);
+        break;
+      case "chatty":
+        // A root lifecycle script with a lot to say. The callback waits until
+        // the whole of it has been taken: a stdout pipe nobody reads blocks here.
+        process.stdout.write(`${"added 1 package, audited 2 packages\n".repeat(60_000)}`, () => {
+          mkdirSync(join(process.cwd(), "node_modules"), { recursive: true });
+          process.exit(0);
+        });
+        break;
+      case "killed":
+        process.kill(process.pid, "SIGKILL");
+        break;
+      case "exit-137":
+        process.stderr.write("npm error code 137\nnpm error command failed\nnpm error command sh -c node crash.js\n");
+        process.exit(137);
+        break;
+      case "hang":
+        startChild();
+        setInterval(() => {}, 1000);
+        break;
+      default:
+        process.stderr.write("npm error code ETARGET\n");
+        process.exit(1);
+    }
+    break;
+  default:
+    process.stderr.write(`fake npm: unexpected ${argv.join(" ")}\n`);
+    process.exit(98);
+}

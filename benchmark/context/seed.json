@@ -1,0 +1,456 @@
+{
+ "sites": [
+  {
+   "id": "S-001",
+   "name": "Northgate Plant"
+  },
+  {
+   "id": "S-002",
+   "name": "Harbor Works"
+  }
+ ],
+ "assets": [
+  {
+   "id": "A-001",
+   "name": "Conveyor Line 1",
+   "site_id": "S-001"
+  },
+  {
+   "id": "A-002",
+   "name": "Packaging Robot",
+   "site_id": "S-001"
+  },
+  {
+   "id": "A-003",
+   "name": "Air Compressor",
+   "site_id": "S-001"
+  },
+  {
+   "id": "A-004",
+   "name": "Control Cabinet",
+   "site_id": "S-001"
+  },
+  {
+   "id": "A-005",
+   "name": "Dock Crane",
+   "site_id": "S-002"
+  },
+  {
+   "id": "A-006",
+   "name": "Hydraulic Press",
+   "site_id": "S-002"
+  },
+  {
+   "id": "A-007",
+   "name": "Pump Station",
+   "site_id": "S-002"
+  },
+  {
+   "id": "A-008",
+   "name": "Cooling Tower",
+   "site_id": "S-002"
+  }
+ ],
+ "technicians": [
+  {
+   "id": "T-001",
+   "name": "Ada Lindqvist",
+   "site_id": "S-001",
+   "skills": [
+    "electrical",
+    "instrumentation"
+   ],
+   "shift_start": "07:00",
+   "shift_end": "17:00"
+  },
+  {
+   "id": "T-002",
+   "name": "Bruno Okafor",
+   "site_id": "S-001",
+   "skills": [
+    "electrical",
+    "mechanical"
+   ],
+   "shift_start": "08:00",
+   "shift_end": "16:00"
+  },
+  {
+   "id": "T-003",
+   "name": "Chiara Mendes",
+   "site_id": "S-002",
+   "skills": [
+    "hydraulics",
+    "mechanical"
+   ],
+   "shift_start": "08:00",
+   "shift_end": "16:00"
+  },
+  {
+   "id": "T-004",
+   "name": "Deniz Arslan",
+   "site_id": "S-002",
+   "skills": [
+    "mechanical"
+   ],
+   "shift_start": "06:00",
+   "shift_end": "14:00"
+  }
+ ],
+ "parts": [
+  {
+   "id": "P-001",
+   "name": "Drive belt",
+   "on_hand": 6,
+   "reserved": 0,
+   "min_stock": 2
+  },
+  {
+   "id": "P-002",
+   "name": "Bearing set",
+   "on_hand": 4,
+   "reserved": 0,
+   "min_stock": 2
+  },
+  {
+   "id": "P-003",
+   "name": "Contactor 24V",
+   "on_hand": 1,
+   "reserved": 0,
+   "min_stock": 2
+  },
+  {
+   "id": "P-004",
+   "name": "Pressure sensor",
+   "on_hand": 3,
+   "reserved": 0,
+   "min_stock": 1
+  },
+  {
+   "id": "P-005",
+   "name": "Hydraulic seal kit",
+   "on_hand": 2,
+   "reserved": 1,
+   "min_stock": 1
+  },
+  {
+   "id": "P-006",
+   "name": "Hydraulic oil 20L",
+   "on_hand": 5,
+   "reserved": 0,
+   "min_stock": 2
+  },
+  {
+   "id": "P-007",
+   "name": "Filter cartridge",
+   "on_hand": 8,
+   "reserved": 0,
+   "min_stock": 3
+  },
+  {
+   "id": "P-008",
+   "name": "Fuse pack",
+   "on_hand": 10,
+   "reserved": 0,
+   "min_stock": 4
+  },
+  {
+   "id": "P-009",
+   "name": "Coupling",
+   "on_hand": 2,
+   "reserved": 0,
+   "min_stock": 1
+  },
+  {
+   "id": "P-010",
+   "name": "Gasket set",
+   "on_hand": 3,
+   "reserved": 0,
+   "min_stock": 3
+  }
+ ],
+ "work_orders": [
+  {
+   "id": "WO-001",
+   "title": "Calibrate cabinet sensors",
+   "asset_id": "A-004",
+   "required_skill": "instrumentation",
+   "duration_minutes": 240,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-05",
+   "priority": "critical",
+   "parts": [
+    {
+     "part_id": "P-004",
+     "quantity": 1
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-002",
+   "title": "Loop check packaging robot",
+   "asset_id": "A-002",
+   "required_skill": "instrumentation",
+   "duration_minutes": 240,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-05",
+   "priority": "high",
+   "parts": [],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-003",
+   "title": "Inspect compressor gauges",
+   "asset_id": "A-003",
+   "required_skill": "instrumentation",
+   "duration_minutes": 60,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-05",
+   "priority": "medium",
+   "parts": [],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-004",
+   "title": "Replace conveyor contactor",
+   "asset_id": "A-001",
+   "required_skill": "electrical",
+   "duration_minutes": 120,
+   "earliest_start": "2026-10-06",
+   "due_date": "2026-10-08",
+   "priority": "high",
+   "parts": [
+    {
+     "part_id": "P-003",
+     "quantity": 2
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-005",
+   "title": "Thermal scan control cabinet",
+   "asset_id": "A-004",
+   "required_skill": "electrical",
+   "duration_minutes": 90,
+   "earliest_start": "2026-10-01",
+   "due_date": "2026-10-06",
+   "priority": "medium",
+   "parts": [
+    {
+     "part_id": "P-008",
+     "quantity": 1
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-006",
+   "title": "Replace packaging robot fuses",
+   "asset_id": "A-002",
+   "required_skill": "electrical",
+   "duration_minutes": 60,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-10",
+   "priority": "medium",
+   "parts": [
+    {
+     "part_id": "P-008",
+     "quantity": 2
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-007",
+   "title": "Conveyor belt replacement",
+   "asset_id": "A-001",
+   "required_skill": "mechanical",
+   "duration_minutes": 180,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-09",
+   "priority": "high",
+   "parts": [
+    {
+     "part_id": "P-001",
+     "quantity": 1
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-008",
+   "title": "Lubricate air compressor",
+   "asset_id": "A-003",
+   "required_skill": "mechanical",
+   "duration_minutes": 60,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-05",
+   "priority": "low",
+   "parts": [
+    {
+     "part_id": "P-007",
+     "quantity": 1
+    }
+   ],
+   "status": "completed",
+   "status_reason": null,
+   "technician_id": "T-002",
+   "scheduled_start": "2026-10-05T08:00:00",
+   "scheduled_end": "2026-10-05T09:00:00"
+  },
+  {
+   "id": "WO-009",
+   "title": "Pressure transmitter check",
+   "asset_id": "A-007",
+   "required_skill": "instrumentation",
+   "duration_minutes": 60,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-09",
+   "priority": "high",
+   "parts": [],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-010",
+   "title": "Reseal hydraulic press",
+   "asset_id": "A-006",
+   "required_skill": "hydraulics",
+   "duration_minutes": 120,
+   "earliest_start": "2026-10-07",
+   "due_date": "2026-10-07",
+   "priority": "high",
+   "parts": [
+    {
+     "part_id": "P-005",
+     "quantity": 1
+    }
+   ],
+   "status": "in_progress",
+   "status_reason": null,
+   "technician_id": "T-003",
+   "scheduled_start": "2026-10-07T10:00:00",
+   "scheduled_end": "2026-10-07T12:00:00"
+  },
+  {
+   "id": "WO-011",
+   "title": "Hydraulic hose inspection",
+   "asset_id": "A-006",
+   "required_skill": "hydraulics",
+   "duration_minutes": 300,
+   "earliest_start": "2026-10-07",
+   "due_date": "2026-10-07",
+   "priority": "medium",
+   "parts": [
+    {
+     "part_id": "P-006",
+     "quantity": 1
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-012",
+   "title": "Dock crane gearbox service",
+   "asset_id": "A-005",
+   "required_skill": "mechanical",
+   "duration_minutes": 120,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-09",
+   "priority": "low",
+   "parts": [
+    {
+     "part_id": "P-002",
+     "quantity": 1
+    },
+    {
+     "part_id": "P-009",
+     "quantity": 1
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-013",
+   "title": "Pump coupling alignment",
+   "asset_id": "A-007",
+   "required_skill": "mechanical",
+   "duration_minutes": 120,
+   "earliest_start": "2026-10-05",
+   "due_date": "2026-10-09",
+   "priority": "low",
+   "parts": [
+    {
+     "part_id": "P-009",
+     "quantity": 1
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  },
+  {
+   "id": "WO-014",
+   "title": "Cooling tower fan bearing",
+   "asset_id": "A-008",
+   "required_skill": "mechanical",
+   "duration_minutes": 480,
+   "earliest_start": "2026-10-06",
+   "due_date": "2026-10-06",
+   "priority": "critical",
+   "parts": [
+    {
+     "part_id": "P-002",
+     "quantity": 2
+    }
+   ],
+   "status": "open",
+   "status_reason": null,
+   "technician_id": null,
+   "scheduled_start": null,
+   "scheduled_end": null
+  }
+ ]
+}

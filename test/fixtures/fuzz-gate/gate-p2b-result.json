@@ -1,0 +1,273 @@
+{
+  "recordedAt": "2026-09-21T21:23:58.503Z",
+  "seed": 20260921,
+  "generatorVersion": 1,
+  "total": 200,
+  "referencePassed": 200,
+  "fingerprint": "9dfa46e680107ff58979c6fd04b22644f7c55c3b95674bf579157472ac224621",
+  "mutantFailures": {
+    "default_error_body": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "parts_without_derived": {
+      "total": 65,
+      "byStratum": {
+        "candidate-other-week-untouched": 10,
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 10
+      }
+    },
+    "site_filter_ignored": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "reset_keeps_parts": {
+      "total": 64,
+      "byStratum": {
+        "candidate-other-week-untouched": 9,
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 10
+      }
+    },
+    "skill_off": {
+      "total": 146,
+      "byStratum": {
+        "candidate-window-overlap": 10,
+        "candidate-other-week-untouched": 7,
+        "candidate-terminal-excluded": 7,
+        "bulk-reset-releases": 10,
+        "fixed-load-blocks-overlap": 8,
+        "fixed-load-counts-to-cap": 10,
+        "order-by-priority": 9,
+        "order-by-due-date": 10,
+        "order-by-id": 10,
+        "parts-blocked": 6,
+        "parts-consumed-in-order": 6,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 9,
+        "daily-cap-480": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 4
+      }
+    },
+    "site_off": {
+      "total": 69,
+      "byStratum": {
+        "candidate-window-overlap": 10,
+        "candidate-other-week-untouched": 4,
+        "candidate-terminal-excluded": 4,
+        "bulk-reset-releases": 4,
+        "fixed-load-blocks-overlap": 3,
+        "order-by-priority": 3,
+        "order-by-due-date": 4,
+        "order-by-id": 3,
+        "parts-blocked": 4,
+        "parts-consumed-in-order": 1,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 4,
+        "slot-window-clipping": 3,
+        "choice-earliest-then-lowest-id": 4,
+        "no-capacity": 6,
+        "transition-stock-effects": 2
+      }
+    },
+    "shift_ignored": {
+      "total": 5,
+      "byStratum": {
+        "slot-grid-and-shift": 5
+      }
+    },
+    "span_days": {
+      "total": 5,
+      "byStratum": {
+        "slot-grid-and-shift": 5
+      }
+    },
+    "overlap_allowed": {
+      "total": 85,
+      "byStratum": {
+        "bulk-reset-releases": 5,
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 5,
+        "order-by-priority": 10,
+        "order-by-due-date": 10,
+        "order-by-id": 10,
+        "slot-grid-and-shift": 10,
+        "daily-cap-480": 5,
+        "choice-earliest-then-lowest-id": 10,
+        "no-capacity": 10
+      }
+    },
+    "cap_off": {
+      "total": 10,
+      "byStratum": {
+        "fixed-load-counts-to-cap": 5,
+        "daily-cap-480": 5
+      }
+    },
+    "fixed_load_ignored": {
+      "total": 33,
+      "byStratum": {
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 3
+      }
+    },
+    "window_unclipped": {
+      "total": 10,
+      "byStratum": {
+        "slot-window-clipping": 10
+      }
+    },
+    "not_earliest": {
+      "total": 165,
+      "byStratum": {
+        "candidate-other-week-untouched": 10,
+        "candidate-terminal-excluded": 10,
+        "bulk-reset-releases": 10,
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 10,
+        "order-by-priority": 10,
+        "order-by-due-date": 10,
+        "order-by-id": 10,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 7,
+        "daily-cap-480": 10,
+        "choice-earliest-then-lowest-id": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 8
+      }
+    },
+    "other_weeks_pulled": {
+      "total": 10,
+      "byStratum": {
+        "candidate-other-week-untouched": 10
+      }
+    },
+    "priority_ignored": {
+      "total": 10,
+      "byStratum": {
+        "order-by-priority": 10
+      }
+    },
+    "due_date_ignored": {
+      "total": 10,
+      "byStratum": {
+        "order-by-due-date": 10
+      }
+    },
+    "id_order_reversed": {
+      "total": 10,
+      "byStratum": {
+        "order-by-id": 10
+      }
+    },
+    "tech_tie_reversed": {
+      "total": 6,
+      "byStratum": {
+        "choice-earliest-then-lowest-id": 6
+      }
+    },
+    "reset_interleaved": {
+      "total": 10,
+      "byStratum": {
+        "bulk-reset-releases": 10
+      }
+    },
+    "parts_check_off": {
+      "total": 35,
+      "byStratum": {
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10
+      }
+    },
+    "no_reservation": {
+      "total": 62,
+      "byStratum": {
+        "candidate-other-week-untouched": 10,
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "no-capacity": 10,
+        "replan-determinism": 9,
+        "transition-stock-effects": 8
+      }
+    },
+    "complete_keeps_reserved": {
+      "total": 2,
+      "byStratum": {
+        "transition-stock-effects": 2
+      }
+    },
+    "cancel_always_releases": {
+      "total": 2,
+      "byStratum": {
+        "transition-stock-effects": 2
+      }
+    },
+    "cancel_keeps_slot": {
+      "total": 4,
+      "byStratum": {
+        "transition-stock-effects": 4
+      }
+    },
+    "start_consumes": {
+      "total": 5,
+      "byStratum": {
+        "transition-stock-effects": 5
+      }
+    },
+    "complete_keeps_on_hand": {
+      "total": 2,
+      "byStratum": {
+        "transition-stock-effects": 2
+      }
+    },
+    "cancel_keeps_reservation": {
+      "total": 4,
+      "byStratum": {
+        "transition-stock-effects": 4
+      }
+    },
+    "hardcoded_plan": {
+      "total": 188,
+      "byStratum": {
+        "candidate-window-overlap": 10,
+        "candidate-other-week-untouched": 10,
+        "candidate-terminal-excluded": 10,
+        "bulk-reset-releases": 10,
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 10,
+        "order-by-priority": 10,
+        "order-by-due-date": 10,
+        "order-by-id": 10,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 10,
+        "daily-cap-480": 10,
+        "choice-earliest-then-lowest-id": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 8
+      }
+    }
+  }
+}

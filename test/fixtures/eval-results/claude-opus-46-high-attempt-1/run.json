@@ -1,0 +1,27 @@
+{
+  "id": "claude-opus-46-high",
+  "model": "claude-opus-4-6",
+  "effort": "high",
+  "agyVersion": "1.1.26",
+  "image": "agrav-bench/harness:2026-09-05@sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "startedAt": "2026-09-04T18:20:00.000Z",
+  "durationMs": 421000,
+  "exitCode": 0,
+  "envelope": {
+    "num_turns": 51,
+    "usage": {
+      "input_tokens": 100000,
+      "output_tokens": 20000,
+      "cache_read_tokens": 1000000,
+      "total_tokens": 1120000,
+      "thinking_tokens": 5000
+    },
+    "conversation_id": "33333333-3333-3333-3333-333333333333",
+    "status": "SUCCESS",
+    "duration_seconds": 420.0,
+    "error": ""
+  },
+  "stderrTail": "",
+  "softDenied": false,
+  "failureKind": null
+}

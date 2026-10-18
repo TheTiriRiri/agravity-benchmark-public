@@ -1,0 +1,15 @@
+Criterion,Score,Max,Notes
+Task completion time,1min 0s,N/A,1min 0s
+Test run,4.09.2026 22:40,N/A,4.09.2026 22:40
+Local build,1,1,"Backend installed and answered /api/v1/health; npm run build succeeded"
+API contract,2,2,"24/24 passed"
+Planner: assignment rules,2,2,"12/12 passed"
+Planner: ordering & determinism,1,1,"11/11 passed"
+Planner: parts & blocking,2,2,"11/11 passed"
+Frontend–API integration,1,1,"Every screen reads and writes through the live API"
+Code structure,1,1,"Planner, routes and storage in separate modules; no duplicated rules"
+Tech stack & run contract,1,1,"FastAPI backend and React frontend on the ports and paths the task names"
+Manual testing,1,1,"Created, scheduled and completed a work order end to end"
+Consistent UI,1,1,"One layout, one type scale and one set of controls on every screen"
+Responsive design,1,1,"Lists and the schedule reflow down to 375px"
+Penalty,0,N/A,"No penalty applied"

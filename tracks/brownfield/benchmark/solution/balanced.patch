@@ -1,0 +1,121 @@
+diff --git a/backend/app/planner.py b/backend/app/planner.py
+index 069bb40..7a89bf2 100644
+--- a/backend/app/planner.py
++++ b/backend/app/planner.py
+@@ -1,5 +1,5 @@
+ import datetime
+-from typing import Dict, List, Tuple, Any
++from typing import Dict, List, Tuple, Any, Optional
+ from app.store import MemoryStore
+ 
+ PRIORITY_ORDER = {
+@@ -9,7 +9,7 @@ PRIORITY_ORDER = {
+     "low": 3
+ }
+ 
+-def plan_week(store: MemoryStore, week_start_str: str) -> Dict[str, Any]:
++def plan_week(store: MemoryStore, week_start_str: str, strategy: Optional[str] = None) -> Dict[str, Any]:
+     # Parse week_start
+     try:
+         monday = datetime.date.fromisoformat(week_start_str)
+@@ -60,6 +60,16 @@ def plan_week(store: MemoryStore, week_start_str: str) -> Dict[str, Any]:
+         candidate["scheduled_end"] = None
+ 
+     # 3. Fixed load: in_progress and completed orders in the week
++    tech_weekly_minutes: Dict[str, int] = {t_id: 0 for t_id in store.technicians.keys()}
++    for wo in store.work_orders.values():
++        if wo["status"] in ("in_progress", "completed") and wo.get("technician_id"):
++            if wo.get("scheduled_start"):
++                try:
++                    s_date = datetime.datetime.fromisoformat(wo["scheduled_start"]).date()
++                    if monday <= s_date <= friday and wo["technician_id"] in tech_weekly_minutes:
++                        tech_weekly_minutes[wo["technician_id"]] += wo.get("duration_minutes", 0)
++                except (ValueError, TypeError):
++                    pass
+     # Helper to get active assignments for a technician on a specific day
+     def get_tech_assignments_for_day(tech_id: str, day: datetime.date) -> List[Tuple[datetime.datetime, datetime.datetime]]:
+         intervals = []
+@@ -180,8 +190,13 @@ def plan_week(store: MemoryStore, week_start_str: str) -> Dict[str, Any]:
+             candidate["status_reason"] = "no_capacity"
+             continue
+ 
+-        # Earliest feasible start, tie-break on technician_id ascending
+-        feasible_slots.sort(key=lambda x: (x[0], x[1]))
++        # 8. Choice
++        if strategy == "balanced":
++            # Min-load first, tie-break by technician_id ascending, then earliest start
++            feasible_slots.sort(key=lambda x: (tech_weekly_minutes.get(x[1], 0), x[1], x[0]))
++        else:
++            # Earliest feasible start, tie-break on technician_id ascending
++            feasible_slots.sort(key=lambda x: (x[0], x[1]))
+         best_start, best_tech_id, best_end = feasible_slots[0]
+ 
+         # 9. On success
+@@ -190,6 +205,7 @@ def plan_week(store: MemoryStore, week_start_str: str) -> Dict[str, Any]:
+         candidate["technician_id"] = best_tech_id
+         candidate["scheduled_start"] = best_start.strftime("%Y-%m-%dT%H:%M:%S")
+         candidate["scheduled_end"] = best_end.strftime("%Y-%m-%dT%H:%M:%S")
++        tech_weekly_minutes[best_tech_id] = tech_weekly_minutes.get(best_tech_id, 0) + candidate["duration_minutes"]
+ 
+         for p_req in candidate.get("parts", []):
+             part = store.parts[p_req["part_id"]]
+@@ -200,10 +216,13 @@ def plan_week(store: MemoryStore, week_start_str: str) -> Dict[str, Any]:
+     unscheduled_ids = sorted([c["id"] for c in candidates if c["status"] == "unscheduled"])
+     all_candidate_orders = sorted(candidates, key=lambda c: c["id"])
+ 
+-    return {
++    result = {
+         "week_start": week_start_str,
+         "scheduled": scheduled_ids,
+         "blocked": blocked_ids,
+         "unscheduled": unscheduled_ids,
+         "orders": all_candidate_orders
+     }
++    if strategy is not None:
++        result["technician_load"] = tech_weekly_minutes
++    return result
+diff --git a/backend/app/routes.py b/backend/app/routes.py
+index 196af76..cfbb1b8 100644
+--- a/backend/app/routes.py
++++ b/backend/app/routes.py
+@@ -229,8 +229,8 @@ async def update_work_order(id: str, request: Request):
+     else:
+         raise InvalidTransitionException(f"Cannot transition work order from '{current_status}' to '{target_status}'")
+ 
+-@router.post("/plan", response_model=PlanResponse)
+-def plan(week_start: Optional[str] = Query(None)):
++@router.post("/plan", response_model=PlanResponse, response_model_exclude_unset=True)
++def plan(week_start: Optional[str] = Query(None), strategy: Optional[str] = Query(None)):
+     if not week_start:
+         raise ValidationErrorException("week_start query parameter is required")
+     try:
+@@ -241,7 +241,10 @@ def plan(week_start: Optional[str] = Query(None)):
+     if monday.weekday() != 0:
+         raise ValidationErrorException("week_start must be a Monday")
+ 
+-    res = plan_week(store, week_start)
++    if strategy is not None and strategy not in ("earliest", "balanced"):
++        raise ValidationErrorException("strategy must be 'earliest' or 'balanced'")
++
++    res = plan_week(store, week_start, strategy=strategy)
+     return res
+ 
+ @router.get("/schedule", response_model=ScheduleResponse)
+diff --git a/backend/app/schemas.py b/backend/app/schemas.py
+index 55e880d..4a96e0e 100644
+--- a/backend/app/schemas.py
++++ b/backend/app/schemas.py
+@@ -1,4 +1,4 @@
+-from typing import List, Optional, Literal
++from typing import List, Optional, Literal, Dict
+ from pydantic import BaseModel, Field, ConfigDict
+ 
+ class SiteSchema(BaseModel):
+@@ -82,6 +82,7 @@ class PlanResponse(BaseModel):
+     blocked: List[str]
+     unscheduled: List[str]
+     orders: List[WorkOrderSchema]
++    technician_load: Optional[Dict[str, int]] = Field(default=None)
+ 
+ class ScheduleAssignment(BaseModel):
+     model_config = ConfigDict(extra="forbid")

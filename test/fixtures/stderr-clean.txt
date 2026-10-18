@@ -1,0 +1,2 @@
+Antigravity CLI 1.1.26
+running with --print-timeout 15m0s, --mode accept-edits

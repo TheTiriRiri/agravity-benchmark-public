@@ -1,0 +1,671 @@
+#!/usr/bin/env node
+// A stateful stand-in for `docker`, for `scripts/lib/attempt-backend.ts` and
+// the tools built on it. Put this directory first on PATH; every container it
+// "runs" is a JSON record under $FAKE_DOCKER_STATE/containers/, and a detached
+// one is a real node HTTP server, so a test can fetch it, crash it, and prove
+// that nothing is left running afterwards.
+//
+// It behaves like the daemon where the backend's correctness depends on it:
+// containers are never `--rm`, so an exited one stays until `rm -f`; killing a
+// `docker run` client does not stop its container; a name cannot be reused
+// until the container is removed; an unknown name is "No such container".
+//
+// It never binds a fixed port. `run -d` serves on a RANDOM 127.0.0.1 port even
+// when `-p` asks for 5100, and `docker port` reports that port, so a caller
+// that assumed 5100 would talk to whatever else listens there and fail.
+//
+// Images: `image inspect` of anything prints FAKE_IMAGE_ID below, and `run`
+// accepts that Id or an `agrav-bench/harness:<tag>`; any other image is exit
+// 125 "No such image", as `--pull never` would make it.
+//
+// Steered by the environment (read by the invocation that needs it):
+//   FAKE_DOCKER_STATE     state directory (required)
+//   FAKE_VENV             ok | fail                    python3 -m venv
+//   FAKE_INSTALL          ok | fail | hang | offline | no-uvicorn | docker-error
+//                         | enospc | interrupted | client-killed
+//                         | network-then-ok | network-twice | network-then-enospc
+//                           pip install -r requirements.txt; `offline` also
+//                           fails the PyPI probe (pip download); `docker-error`
+//                           is docker's own exit 125, the container never started;
+//                           `enospc` fails as pip does on a full disk (the probe
+//                           still succeeds); `interrupted` exits 130 as pip does
+//                           on SIGINT; `client-killed` SIGKILLs this client once
+//                           the container runs, as a signal from outside would;
+//                           `network-then-ok` fails the first install with a
+//                           ReadTimeoutError and succeeds on the retry;
+//                           `network-twice` fails both with ReadTimeoutError;
+//                           `network-then-enospc` fails the first install with a
+//                           ReadTimeoutError and the retry with disk full
+//   FAKE_PROBE            ok | fail | hang             the PyPI probe (pip download);
+//                           `fail` exits 1 as if PyPI is unreachable;
+//                           `hang` never finishes, like `FAKE_INSTALL=hang`
+//   FAKE_CLIENT_LINGER_MS a successful `pip install` client exits at once, but a
+//                           grandchild holds its stdout and stderr open until the
+//                           container's record is removed (`rm -f`), or for this
+//                           long if that comes first: the caller sees the exit, and
+//                           the close only after the removal
+//   FAKE_BACKEND          ok | crash | crash-now | silent | no-health | exit-mid | vanish-mid
+//                           what a `run -d` serves; `crash` exits after
+//                           300 ms, `crash-now` as soon as its port is bound;
+//                           `silent` accepts and never answers; `no-health`
+//                           answers 404 to everything; `exit-mid` and
+//                           `vanish-mid` answer health as `ok` does, and the
+//                           first other request kills the container — which
+//                           then exits 137, as an OOM kill does, or vanishes
+//                           from the daemon, as after a `docker rm -f` from
+//                           outside
+//   FAKE_HEALTH_404_FIRST `ok` answers its first n GET /api/v1/health with 404,
+//                           then 200 (default 0): counted, never timed, so a
+//                           loaded machine cannot change which probe succeeds
+//   FAKE_RUN_D            ok | port-busy                exit 125, "port is already allocated"
+//   FAKE_RM               ok | fail                     `rm -f` fails and removes nothing
+//   FAKE_INSPECT_FAIL_AFTER n: a state inspect (a format naming
+//                           `{{.State.ExitCode}}`, which only the backend's own
+//                           polling asks for) after the n-th fails as a daemon
+//                           that cannot answer; counted in inspects.count, so a
+//                           loaded machine cannot change which one fails. The
+//                           removal's inspect is left alone
+//
+// Also written under $FAKE_DOCKER_STATE:
+//   calls.log   one JSON argv per invocation
+//   pids.log    `<pid> <start time>` for every process a container ran as (start
+//               time: field 22 of /proc/<pid>/stat, `?` if unreadable), so tests
+//               can prove none survives, and never signal a reused pid
+//   containers/<name>.log
+//               a detached container's output; a request's line is written
+//               before its answer is sent, so whoever has the answer finds it
+//
+// No process this fake leaves behind outlives its purpose: a detached
+// "container" (`__container`), a hung pip (`__sleep`) and a lingering client
+// grandchild (`__linger`) are each recorded twice — by the client right after
+// the spawn, before anything else, and by the process itself first thing, so
+// neither a client killed mid-spawn nor a process killed while it starts
+// goes unrecorded — exit once their container record (or the whole state
+// directory) is gone, and exit anyway after MAX_LIFETIME_MS. So does the
+// client of a hung pip. A test process that dies before its cleanup leaks
+// them for two minutes at most.
+//
+// Nothing here re-creates a state or scratch directory a test has removed:
+// `<state>/containers` is made only inside an existing state directory, the
+// watchers test bare existence, and the venv step refuses a missing mount
+// source (where a real daemon would create it, as root).
+//
+// `docker --fake-identity` prints `fake-docker-backend`, so a test can prove
+// that PATH resolves `docker` to this file and not to a real daemon's client.
+//
+// Internal modes, never called by the code under test:
+//   docker __container <state> <name> <mode> <first404>  a detached server
+//   docker __sleep <state> <name>                         a hung pip install or probe
+//   docker __linger <state> <name> <ms>                   holds a client's stdio open
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { createServer } from "node:http";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const SELF = fileURLToPath(import.meta.url);
+const argv = process.argv.slice(2);
+/** What `image inspect` answers, for any image. */
+const FAKE_IMAGE_ID = `sha256:${"f".repeat(64)}`;
+/** The longest any process this fake detaches may live. */
+const MAX_LIFETIME_MS = 120_000;
+/** How often a detached process checks that its container record still exists. */
+const WATCH_MS = 200;
+
+// ---------------------------------------------------------------------------
+// state
+
+function stateDir() {
+  const dir = process.env.FAKE_DOCKER_STATE;
+  if (!dir) fail(64, "fake docker: FAKE_DOCKER_STATE is not set");
+  return dir;
+}
+/**
+ * `<state>/containers`, created on first use — but only inside a state
+ * directory that still exists: a client still running after a test removed
+ * its state must never re-create it (it would then outlive the test).
+ */
+function containersDir(state = stateDir()) {
+  const dir = join(state, "containers");
+  try {
+    mkdirSync(dir);
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  return dir;
+}
+const file = (name, ext, state) => join(containersDir(state), `${name}.${ext}`);
+
+function writeAtomic(path, text) {
+  const tmp = `${path}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+  writeFileSync(tmp, text);
+  renameSync(tmp, path);
+}
+function readRecord(name) {
+  try {
+    return JSON.parse(readFileSync(file(name, "json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+const writeRecord = (rec) => writeAtomic(file(rec.name, "json"), JSON.stringify(rec));
+/** A finished foreground run must not resurrect a container `rm -f` removed meanwhile. */
+function updateRecord(name, change) {
+  const rec = readRecord(name);
+  if (rec !== null) writeRecord({ ...rec, ...change });
+}
+function listRecords() {
+  return readdirSync(containersDir())
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => readRecord(f.slice(0, -".json".length)))
+    .filter((rec) => rec !== null);
+}
+/** `<pid> <start time>`, so a reaper can tell this process from a later one with its pid. */
+const notePid = (pid, state = stateDir()) => appendFileSync(join(state, "pids.log"), `${pid} ${pidStart(pid) ?? "?"}\n`);
+
+/** Field 22 of /proc/<pid>/stat, so a recorded pid is never confused with a reused one. */
+function pidStart(pid) {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19] ?? null;
+  } catch {
+    return null;
+  }
+}
+/** Alive and not a zombie: a killed orphan lingers as a zombie until its reaper gets to it. */
+function alive(pid, start) {
+  if (!pid) return false;
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+    return fields[0] !== "Z" && (start == null || fields[19] === start);
+  } catch {
+    try {
+      process.kill(pid, 0);
+      return start == null;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function state(rec) {
+  if (rec.status === "created") return { running: false, exitCode: rec.exitCode ?? 0, status: "created" };
+  if (rec.status === "exited") return { running: false, exitCode: rec.exitCode ?? 0, status: "exited" };
+  const exitFile = file(rec.name, "exit");
+  if (existsSync(exitFile)) return { running: false, exitCode: Number(readFileSync(exitFile, "utf8")), status: "exited" };
+  if (alive(rec.pid, rec.pidStart)) return { running: true, exitCode: 0, status: "running" };
+  return { running: false, exitCode: 137, status: "exited" };
+}
+
+function fail(code, message) {
+  if (message) process.stderr.write(`${message}\n`);
+  process.exit(code);
+}
+
+// ---------------------------------------------------------------------------
+// commands
+
+function main() {
+  appendFileSync(join(stateDir(), "calls.log"), `${JSON.stringify(argv)}\n`);
+  switch (argv[0]) {
+    case "image":
+      if (argv[1] !== "inspect") fail(64, `fake docker: unsupported: image ${argv[1]}`);
+      process.stdout.write(`${FAKE_IMAGE_ID}\n`);
+      return;
+    case "run":
+      return run(argv.slice(1));
+    case "port":
+      return port(argv[1]);
+    case "inspect":
+      return inspect(argv.slice(1));
+    case "logs":
+      return logs(argv.slice(1));
+    case "rm":
+      return rm(argv.slice(1));
+    case "ps":
+      return ps(argv.slice(1));
+    default:
+      fail(64, `fake docker: unsupported command: ${argv.join(" ")}`);
+  }
+}
+
+function noSuchContainer(name) {
+  fail(1, `Error response from daemon: No such container: ${name}`);
+}
+
+function port(name) {
+  const rec = readRecord(name);
+  if (rec === null) noSuchContainer(name);
+  const portFile = file(name, "port");
+  if (!state(rec).running || !existsSync(portFile)) fail(1, `Error: No public port '5100/tcp' published for ${name}`);
+  process.stdout.write(`127.0.0.1:${readFileSync(portFile, "utf8").trim()}\n`);
+}
+
+function inspect(args) {
+  let format = "{{json .}}";
+  const names = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-f" || args[i] === "--format") format = args[++i];
+    else names.push(args[i]);
+  }
+  const failAfter = process.env.FAKE_INSPECT_FAIL_AFTER;
+  if (failAfter && format.includes("{{.State.ExitCode}}")) {
+    const counter = join(stateDir(), "inspects.count");
+    const n = (existsSync(counter) ? Number(readFileSync(counter, "utf8")) : 0) + 1;
+    writeFileSync(counter, String(n));
+    if (n > Number(failAfter)) fail(1, "Error response from daemon: fake docker: the daemon did not answer (inspect after FAKE_INSPECT_FAIL_AFTER)");
+  }
+  const rec = readRecord(names[0]);
+  if (rec === null) fail(1, `Error: No such container: ${names[0]}`);
+  const s = state(rec);
+  const out = format
+    .replaceAll("{{.State.Running}}", String(s.running))
+    .replaceAll("{{.State.ExitCode}}", String(s.exitCode))
+    .replaceAll("{{.State.Status}}", s.status)
+    .replaceAll("{{.Name}}", `/${rec.name}`);
+  process.stdout.write(`${out}\n`);
+}
+
+function logs(args) {
+  let tail = Infinity;
+  let name = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--tail" || args[i] === "-n") tail = Number(args[++i]);
+    else name = args[i];
+  }
+  if (readRecord(name) === null) noSuchContainer(name);
+  const logFile = file(name, "log");
+  const lines = existsSync(logFile) ? readFileSync(logFile, "utf8").split("\n") : [];
+  if (lines.at(-1) === "") lines.pop();
+  const shown = Number.isFinite(tail) ? lines.slice(Math.max(0, lines.length - tail)) : lines;
+  // uvicorn and Python write to stderr, and so does this container.
+  if (shown.length > 0) process.stderr.write(`${shown.join("\n")}\n`);
+}
+
+function rm(args) {
+  const names = args.filter((a) => a !== "-f" && a !== "--force");
+  if (process.env.FAKE_RM === "fail") {
+    fail(1, `Error response from daemon: cannot remove container "/${names[0]}": could not kill: tried to kill container, but did not receive an exit event`);
+  }
+  for (const name of names) {
+    const rec = readRecord(name);
+    if (rec === null) continue; // `rm -f` of an unknown name is not an error
+    if (rec.status === "running" && alive(rec.pid, rec.pidStart)) {
+      try {
+        process.kill(rec.pid, "SIGKILL");
+      } catch {}
+      const deadline = Date.now() + 3000;
+      while (alive(rec.pid, rec.pidStart) && Date.now() < deadline) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+    }
+    for (const ext of ["json", "port", "exit", "log"]) rmSync(file(name, ext), { force: true });
+    process.stdout.write(`${name}\n`);
+  }
+}
+
+function ps(args) {
+  const filters = [];
+  let format = "{{.Names}}";
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--filter" || args[i] === "-f") filters.push(args[++i]);
+    else if (args[i] === "--format") format = args[++i];
+    else if (args[i] === "-a" || args[i] === "--all") continue;
+    else fail(64, `fake docker: unsupported ps argument: ${args[i]}`);
+  }
+  const lines = [];
+  for (const rec of listRecords()) {
+    const matches = filters.every((f) => {
+      if (!f.startsWith("label=")) fail(64, `fake docker: unsupported ps filter: ${f}`);
+      const [key, ...value] = f.slice("label=".length).split("=");
+      return value.length === 0 ? key in rec.labels : rec.labels[key] === value.join("=");
+    });
+    if (!matches) continue;
+    lines.push(
+      format
+        .replaceAll("{{.Names}}", rec.name)
+        .replaceAll("{{.ID}}", rec.id.slice(0, 12))
+        .replace(/\{\{\.Label "([^"]+)"\}\}/g, (_, key) => rec.labels[key] ?? ""),
+    );
+  }
+  if (lines.length > 0) process.stdout.write(`${lines.join("\n")}\n`);
+}
+
+// ---------------------------------------------------------------------------
+// run
+
+function parseRun(args) {
+  const opts = { detached: false, name: null, labels: {}, env: [], mounts: [], tmpfs: [], publish: [], entrypoint: null };
+  let i = 0;
+  const value = () => {
+    if (i + 1 >= args.length) fail(125, `docker: flag needs an argument: ${args[i]}`);
+    return args[++i];
+  };
+  for (; i < args.length && args[i].startsWith("-"); i++) {
+    switch (args[i]) {
+      case "-d":
+      case "--detach":
+        opts.detached = true;
+        break;
+      case "--init":
+        break;
+      case "--name":
+        opts.name = value();
+        break;
+      case "--label": {
+        const [key, ...rest] = value().split("=");
+        opts.labels[key] = rest.join("=");
+        break;
+      }
+      case "-e":
+        opts.env.push(value());
+        break;
+      case "-v": {
+        const parts = value().split(":");
+        opts.mounts.push({ source: parts[0], target: parts[1], readOnly: parts[2] === "ro" });
+        break;
+      }
+      case "--tmpfs":
+        opts.tmpfs.push(value());
+        break;
+      case "-p":
+        opts.publish.push(value());
+        break;
+      case "--entrypoint":
+        opts.entrypoint = value();
+        break;
+      case "-w":
+      case "--user":
+      case "--pids-limit":
+      case "--pull":
+        value();
+        break;
+      default:
+        fail(125, `unknown flag: ${args[i]}`);
+    }
+  }
+  if (i >= args.length) fail(125, "docker: 'docker run' requires at least 1 argument");
+  return { ...opts, image: args[i], command: args.slice(i + 1) };
+}
+
+/** The host directory behind a container path, through the bind mounts. */
+function hostPathOf(mounts, containerPath) {
+  const mount = mounts
+    .filter((m) => containerPath === m.target || containerPath.startsWith(`${m.target}/`))
+    .sort((a, b) => b.target.length - a.target.length)[0];
+  return mount === undefined ? null : mount.source + containerPath.slice(mount.target.length);
+}
+
+function run(args) {
+  const opts = parseRun(args);
+  if (opts.image !== FAKE_IMAGE_ID && !/^agrav-bench\/harness:[\w.-]+$/.test(opts.image)) {
+    fail(125, `Unable to find image '${opts.image}' locally\ndocker: Error response from daemon: No such image: ${opts.image}.`);
+  }
+  const name = opts.name ?? `fake_${randomBytes(4).toString("hex")}`;
+  if (readRecord(name) !== null) {
+    fail(125, `docker: Error response from daemon: Conflict. The container name "/${name}" is already in use by container "${readRecord(name).id}". You have to remove (or rename) that container to be able to reuse that name.`);
+  }
+  const rec = {
+    name,
+    id: randomBytes(32).toString("hex"),
+    labels: opts.labels,
+    image: opts.image,
+    detached: opts.detached,
+    publish: opts.publish,
+    status: "created",
+    exitCode: null,
+    pid: null,
+    pidStart: null,
+  };
+  writeRecord(rec);
+
+  // A missing entrypoint is the runtime's error: the container stays "created".
+  if (opts.entrypoint !== null && opts.entrypoint.startsWith("/")) {
+    const host = hostPathOf(opts.mounts, opts.entrypoint);
+    if (host === null || !existsSync(host)) {
+      updateRecord(name, { exitCode: 127 });
+      fail(127, `docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: exec: "${opts.entrypoint}": stat ${opts.entrypoint}: no such file or directory: unknown.`);
+    }
+  }
+  if (opts.detached) return runDetached(rec, opts);
+  return runForeground(rec, opts);
+}
+
+function runDetached(rec, opts) {
+  if (process.env.FAKE_RUN_D === "port-busy") {
+    fail(125, `docker: Error response from daemon: driver failed programming external connectivity on endpoint ${rec.name} (${rec.id}): Bind for 127.0.0.1:5100 failed: port is already allocated.`);
+  }
+  const mode = process.env.FAKE_BACKEND ?? "ok";
+  const log = openSync(file(rec.name, "log"), "a");
+  const child = spawn(process.execPath, [SELF, "__container", stateDir(), rec.name, mode, process.env.FAKE_HEALTH_404_FIRST ?? "0"], {
+    detached: true,
+    stdio: ["ignore", log, log],
+  });
+  notePid(child.pid);
+  child.unref();
+  writeRecord({ ...rec, status: "running", pid: child.pid, pidStart: pidStart(child.pid) });
+  const portFile = file(rec.name, "port");
+  const deadline = Date.now() + 5000;
+  while (!existsSync(portFile)) {
+    if (Date.now() > deadline) fail(125, `fake docker: ${rec.name} never bound a port`);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+  }
+  process.stdout.write(`${rec.id}\n`);
+}
+
+function runForeground(rec, opts) {
+  writeRecord({ ...rec, status: "running", pid: process.pid, pidStart: pidStart(process.pid) });
+  const finish = (code, stdout = "", stderr = "") => {
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr);
+    updateRecord(rec.name, { status: "exited", exitCode: code });
+    process.exit(code);
+  };
+  const scoring = hostPathOf(opts.mounts, "/scoring");
+  const [verb] = opts.command;
+
+  if (opts.entrypoint === "python3" && opts.command.join(" ") === "-m venv /scoring/venv") {
+    if (process.env.FAKE_VENV === "fail") return finish(1, "", "Error: [Errno 13] Permission denied: '/scoring/venv'\n");
+    // A real daemon would create a missing bind source (as root); the fake
+    // refuses, so a run still pending after its test removed the scratch
+    // directory cannot re-create it.
+    if (scoring === null || !existsSync(scoring)) return finish(125, "", `docker: Error response from daemon: fake docker: bind source ${scoring} does not exist.\n`);
+    const bin = join(scoring, "venv", "bin");
+    mkdirSync(bin, { recursive: true });
+    for (const tool of ["python", "python3", "pip"]) writeFileSync(join(bin, tool), "#!/bin/sh\n", { mode: 0o755 });
+    writeFileSync(join(scoring, "venv", "pyvenv.cfg"), "home = /usr/bin\n");
+    return finish(0);
+  }
+  if (opts.entrypoint !== "/scoring/venv/bin/pip") return finish(64, "", `fake docker: unsupported foreground run: ${opts.entrypoint} ${opts.command.join(" ")}\n`);
+
+  const install = process.env.FAKE_INSTALL ?? "ok";
+  if (verb === "install") {
+    switch (install) {
+      case "ok":
+        writeFileSync(join(scoring, "venv", "bin", "uvicorn"), "#!/bin/sh\n", { mode: 0o755 });
+        if (process.env.FAKE_CLIENT_LINGER_MS) {
+          // Inherits this client's stdout and stderr: the caller's `close` waits for it.
+          const linger = spawn(process.execPath, [SELF, "__linger", stateDir(), rec.name, process.env.FAKE_CLIENT_LINGER_MS], {
+            detached: true,
+            stdio: ["ignore", "inherit", "inherit"],
+          });
+          notePid(linger.pid);
+          linger.unref();
+        }
+        return finish(0, "Collecting fastapi==0.115.14\nCollecting uvicorn==0.30.6\nSuccessfully installed fastapi-0.115.14 uvicorn-0.30.6\n");
+      case "no-uvicorn":
+        return finish(0, "Collecting fastapi==0.115.14\nSuccessfully installed fastapi-0.115.14\n");
+      case "fail":
+        return finish(
+          1,
+          "Collecting fastapi==0.115.14\n",
+          "ERROR: Could not find a version that satisfies the requirement nopkg-fake==9.9 (from versions: none)\nERROR: No matching distribution found for nopkg-fake==9.9\n",
+        );
+      case "offline":
+        return finish(
+          1,
+          "",
+          "WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError(\"Failed to establish a new connection: [Errno 101] Network is unreachable\")': /simple/fastapi/\nERROR: Could not find a version that satisfies the requirement fastapi==0.115.14 (from versions: none)\n",
+        );
+      case "docker-error":
+        updateRecord(rec.name, { status: "created", exitCode: 125, pid: null, pidStart: null });
+        return fail(125, "docker: Error response from daemon: error while creating mount source path '/scoring': mkdir /scoring: read-only file system.");
+      case "hang":
+        return hang(rec);
+      case "enospc":
+        return finish(
+          1,
+          "Collecting fastapi==0.115.14\nInstalling collected packages: fastapi\n",
+          "ERROR: Could not install packages due to an OSError: [Errno 28] No space left on device: '/scoring/venv/lib/python3.11/site-packages/fastapi'\n",
+        );
+      case "interrupted":
+        return finish(130, "Collecting fastapi==0.115.14\n", "ERROR: Operation cancelled by user\n");
+      case "client-killed":
+        // The record says running, as a real container's would; its client dies.
+        return process.kill(process.pid, "SIGKILL");
+      case "network-then-ok":
+      case "network-then-enospc":
+      case "network-twice": {
+        const iCounter = join(stateDir(), "installs.count");
+        const iN = (existsSync(iCounter) ? Number(readFileSync(iCounter, "utf8")) : 0) + 1;
+        writeFileSync(iCounter, String(iN));
+        if (install === "network-then-ok" && iN > 1) {
+          writeFileSync(join(scoring, "venv", "bin", "uvicorn"), "#!/bin/sh\n", { mode: 0o755 });
+          return finish(0, "Collecting fastapi==0.115.14\nCollecting uvicorn==0.30.6\nSuccessfully installed fastapi-0.115.14 uvicorn-0.30.6\n");
+        }
+        if (install === "network-then-enospc" && iN > 1) {
+          return finish(
+            1,
+            "Collecting fastapi==0.115.14\nInstalling collected packages: fastapi\n",
+            "ERROR: Could not install packages due to an OSError: [Errno 28] No space left on device: '/scoring/venv/lib/python3.11/site-packages/fastapi'\n",
+          );
+        }
+        return finish(
+          1,
+          "",
+          "WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by " +
+            "'ReadTimeoutError(\"HTTPSConnectionPool(host=\\'files.pythonhosted.org\\', port=443): Read timed out.\")': /packages/fastapi/\n" +
+            "ERROR: Could not find a version that satisfies the requirement fastapi==0.115.14 (from versions: none)\n" +
+            "ERROR: No matching distribution found for fastapi==0.115.14\n",
+        );
+      }
+      default:
+        return finish(64, "", `fake docker: unknown FAKE_INSTALL ${install}\n`);
+    }
+  }
+  if (verb === "download") {
+    if (process.env.FAKE_PROBE === "hang") return hang(rec);
+    if (process.env.FAKE_PROBE === "fail" || install === "offline") {
+      return finish(1, "", "ERROR: Could not find a version that satisfies the requirement fastapi==0.115.14 (from versions: none)\n");
+    }
+    return finish(0, "Collecting fastapi==0.115.14\nSaved /tmp/agrav-probe/fastapi-0.115.14-py3-none-any.whl\nSuccessfully downloaded fastapi\n");
+  }
+  if (verb === "freeze") return finish(0, "fastapi==0.115.14\nuvicorn==0.30.6\n");
+  return finish(64, "", `fake docker: unsupported pip command: ${opts.command.join(" ")}\n`);
+}
+
+/**
+ * A foreground run that never finishes. The "container" is a detached
+ * sleeper, so killing this client leaves it running, as killing a real
+ * `docker run` client leaves its container; `rm -f` kills it.
+ */
+function hang(rec) {
+  const state = stateDir();
+  const sleeper = spawn(process.execPath, [SELF, "__sleep", state, rec.name], { detached: true, stdio: "ignore" });
+  notePid(sleeper.pid);
+  sleeper.unref();
+  updateRecord(rec.name, { pid: sleeper.pid, pidStart: pidStart(sleeper.pid) });
+  // Removed under us, or the whole state directory is: exit as a killed
+  // container's client does. A bare existence check, so a removed state
+  // directory is never re-created; and bounded like every detached process.
+  const bornAt = Date.now();
+  setInterval(() => {
+    if (!recordExists(state, rec.name) || Date.now() - bornAt > MAX_LIFETIME_MS) process.exit(137);
+  }, 100);
+}
+
+/**
+ * For every detached process: exit once `stillWanted()` says no (its record
+ * or the state directory is gone), and after MAX_LIFETIME_MS whatever happens.
+ */
+function watchLifetime(stillWanted) {
+  const bornAt = Date.now();
+  setInterval(() => {
+    if (Date.now() - bornAt > MAX_LIFETIME_MS || !stillWanted()) process.exit(0);
+  }, WATCH_MS);
+}
+
+const recordExists = (state, name) => existsSync(join(state, "containers", `${name}.json`));
+
+// ---------------------------------------------------------------------------
+// a detached "container": an HTTP server on a random port
+
+function runContainer([state, name, mode, first404]) {
+  notePid(process.pid, state);
+  watchLifetime(() => recordExists(state, name));
+  let healthProbes = 0;
+  const server = createServer((req, res) => {
+    if (mode === "silent") return; // accept, never answer
+    const isHealth = req.method === "GET" && req.url === "/api/v1/health";
+    if (isHealth) healthProbes += 1;
+    if (!isHealth && (mode === "exit-mid" || mode === "vanish-mid")) {
+      process.stderr.write(`INFO:     127.0.0.1 - "${req.method} ${req.url} HTTP/1.1" (killed)\n`);
+      if (mode === "exit-mid") {
+        writeAtomic(file(name, "exit", state), "137");
+      } else {
+        for (const ext of ["json", "port", "exit", "log"]) rmSync(file(name, ext, state), { force: true });
+      }
+      process.exit(137);
+    }
+    const midOk = (mode === "exit-mid" || mode === "vanish-mid") && isHealth;
+    const healthy = (mode === "ok" || midOk) && isHealth && healthProbes > Number(first404 || 0);
+    // The line first (stderr is a file here, so the write is synchronous):
+    // whoever has the answer can find it in the log.
+    process.stderr.write(`INFO:     127.0.0.1 - "${req.method} ${req.url} HTTP/1.1" ${healthy ? "200 OK" : "404 Not Found"}\n`);
+    res.writeHead(healthy ? 200 : 404, { "content-type": "application/json" });
+    res.end(healthy ? '{"status":"ok"}' : '{"detail":"Not Found"}');
+  });
+  server.listen(0, "127.0.0.1", () => {
+    writeAtomic(file(name, "port", state), String(server.address().port));
+    const crash = () => {
+      process.stderr.write(
+        'Traceback (most recent call last):\n  File "/workspace/backend/app/main.py", line 3, in <module>\n    import nopkg_fake\nModuleNotFoundError: No module named \'nopkg_fake\'\n',
+      );
+      writeAtomic(file(name, "exit", state), "1");
+      process.exit(1);
+    };
+    if (mode === "crash-now") return crash();
+    if (mode === "crash") return void setTimeout(crash, 300);
+    process.stderr.write("INFO:     Started server process\nINFO:     Uvicorn running on http://0.0.0.0:5100 (Press CTRL+C to quit)\n");
+  });
+}
+
+// ---------------------------------------------------------------------------
+// dispatch, last: the helpers above are `const`s
+
+function runSleep([state, name]) {
+  notePid(process.pid, state);
+  watchLifetime(() => recordExists(state, name));
+}
+
+function runLinger([state, name, ms]) {
+  notePid(process.pid, state);
+  watchLifetime(() => recordExists(state, name));
+  setTimeout(() => process.exit(0), Number(ms));
+}
+
+if (argv[0] === "--fake-identity") process.stdout.write("fake-docker-backend\n");
+else if (argv[0] === "__container") runContainer(argv.slice(1));
+else if (argv[0] === "__sleep") runSleep(argv.slice(1));
+else if (argv[0] === "__linger") runLinger(argv.slice(1));
+else main();

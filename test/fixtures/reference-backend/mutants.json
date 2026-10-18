@@ -1,0 +1,89 @@
+{
+  "default_error_body": [
+    "api-contract.test.ts"
+  ],
+  "parts_without_derived": [
+    "api-contract.test.ts"
+  ],
+  "site_filter_ignored": [
+    "api-contract.test.ts"
+  ],
+  "reset_keeps_parts": [
+    "api-contract.test.ts"
+  ],
+  "skill_off": [
+    "planner-assignment.test.ts"
+  ],
+  "site_off": [
+    "planner-assignment.test.ts"
+  ],
+  "shift_ignored": [
+    "planner-assignment.test.ts"
+  ],
+  "span_days": [
+    "planner-assignment.test.ts"
+  ],
+  "overlap_allowed": [
+    "planner-assignment.test.ts"
+  ],
+  "cap_off": [
+    "planner-assignment.test.ts"
+  ],
+  "fixed_load_ignored": [
+    "planner-assignment.test.ts"
+  ],
+  "window_unclipped": [
+    "planner-assignment.test.ts"
+  ],
+  "not_earliest": [
+    "planner-assignment.test.ts",
+    "planner-ordering.test.ts"
+  ],
+  "other_weeks_pulled": [
+    "planner-ordering.test.ts"
+  ],
+  "priority_ignored": [
+    "planner-ordering.test.ts"
+  ],
+  "due_date_ignored": [
+    "planner-ordering.test.ts"
+  ],
+  "id_order_reversed": [
+    "planner-ordering.test.ts"
+  ],
+  "tech_tie_reversed": [
+    "planner-ordering.test.ts"
+  ],
+  "reset_interleaved": [
+    "planner-ordering.test.ts"
+  ],
+  "parts_check_off": [
+    "planner-parts.test.ts"
+  ],
+  "no_reservation": [
+    "planner-parts.test.ts"
+  ],
+  "complete_keeps_reserved": [
+    "planner-parts.test.ts"
+  ],
+  "cancel_always_releases": [
+    "planner-parts.test.ts"
+  ],
+  "cancel_keeps_slot": [
+    "planner-parts.test.ts"
+  ],
+  "start_consumes": [
+    "planner-parts.test.ts"
+  ],
+  "complete_keeps_on_hand": [
+    "planner-parts.test.ts"
+  ],
+  "cancel_keeps_reservation": [
+    "planner-parts.test.ts"
+  ],
+  "hardcoded_plan": [
+    "planner-assignment.test.ts",
+    "planner-ordering.test.ts",
+    "planner-parts.test.ts"
+  ]
+}

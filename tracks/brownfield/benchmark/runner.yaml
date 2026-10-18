@@ -1,0 +1,31 @@
+# The benchmark matrix for the brownfield track. `scripts/run-matrix.ts` reads this file.
+#
+# The image's run-attempt has `--no-new-project`, which runs agy on the copy of
+# the base each attempt starts from.
+image: agrav-bench/harness:2026-10-04
+agyVersion: 1.2.7
+
+# The model that runs the scoring skill. Scores are only comparable across runs
+# with the same judge and the same rubric id.
+judge: claude-opus-5-5
+
+# The brownfield rubric id: maintenance-console-brownfield@ plus 12 hex digits.
+rubric: maintenance-console-brownfield@a02c2e3f98e2
+
+# Outer docker timeout, 32 min: two more than agy's own 30.
+timeoutMs: 1920000
+printTimeout: 30m
+
+attempts: 5
+
+quotaFloor: 10
+
+credentialFiles:
+  - .gemini/antigravity-cli/antigravity-oauth-token
+  - .gemini/antigravity-cli/installation_id
+
+matrix:
+  - { id: gemini-38-flash-high,  model: gemini-3.8-flash-high,     effort: high,   family: gemini-38-flash,   usageLabel: "Gemini 3.8 Flash (High)" }
+  - { id: gemini-31-pro-high,    model: gemini-3.1-pro-high,       effort: high,   family: gemini-31-pro,     usageLabel: "Gemini 3.1 Pro (High)" }
+  - { id: claude-sonnet-46-high, model: claude-sonnet-4-6,         effort: null,   family: claude-sonnet-46,  usageLabel: "Claude Sonnet 4.6 (Thinking)" }
+  - { id: claude-opus-46-high,   model: claude-opus-4-6-thinking,  effort: null,   family: claude-opus-46,    usageLabel: "Claude Opus 4.6 (Thinking)" }

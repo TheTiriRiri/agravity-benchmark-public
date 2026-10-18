@@ -1,0 +1,6 @@
+{
+  "files": [
+    { "file": "change-invariants.test.ts", "row": "Change suite", "max": 2, "tests": 3 },
+    { "file": "change-tie-break.test.ts", "row": "Change suite", "max": 1, "tests": 1 }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "status": "ERROR",
+  "num_turns": 1,
+  "duration_seconds": 70.0,
+  "usage": {
+    "input_tokens": 185000,
+    "output_tokens": 6500,
+    "cache_read_tokens": 0,
+    "thinking_tokens": 0,
+    "total_tokens": 191500
+  },
+  "conversation_id": "f1f1f1f1-0000-4000-8000-000000000003",
+  "error": "Our servers are experiencing high traffic right now, please try again in a minute."
+}

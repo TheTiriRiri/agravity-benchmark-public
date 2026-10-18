@@ -1,0 +1,118 @@
+# The benchmark matrix. `scripts/run-matrix.ts` reads this file.
+#
+# Five (model, effort) pairs x `attempts` runs each. Every id carries an effort
+# suffix even where only one effort level runs, so ids are uniform and directory
+# names stay parseable: `eval-attempts/<id>-attempt-<n>/`, matched by
+# /^([a-z0-9.-]+)-attempt-(\d+)$/ — no underscores anywhere.
+
+# Tag only. A locally built image has no registry digest, so run-matrix.ts
+# resolves `docker image inspect -f '{{.Id}}'` at run time and records
+# `<tag>@<image Id>` in each run.json. See images/harness/IMAGE.md.
+#
+# Every container the runner starts uses this one image: the attempt, the
+# `--usage` quota gate, and the credential copy (with `--entrypoint cp`). Nothing
+# is pulled from a registry mid-matrix, and the step that handles the OAuth token
+# runs in a pinned image rather than an unpinned `alpine`.
+#
+# The scoring tools (contract-tests, serve-attempt, take-screenshots,
+# gate:backend) read this key too, through readScoringImage(), which ignores
+# `hold`, and run each backend by the tag's image Id. A new tag changes what
+# gate 3a proved: run it again.
+image: agrav-bench/harness:2026-10-04
+agyVersion: 1.2.7
+
+# The model that runs the scoring skill. Scores are only comparable across runs
+# with the same judge and the same rubric id.
+judge: claude-opus-5-5
+
+# The rubric id: `maintenance-console@` plus the first 12 hex digits of a
+# sha256 over the files listed in RUBRIC_ID_INPUTS in scripts/lib/rubric.ts —
+# the prompt, criteria.md, the scoring skill, rubric.ts itself (rows, maxima,
+# rounding, limits), the Notes formatter, the suite runner, the hidden tests and
+# the seed — hashed the way gate 2's fingerprint is. A content hash, not a
+# commit sha: a commit cannot name its own sha.
+#
+# test/rubric-id.test.ts recomputes it, so `npm test` fails when one of those
+# files changes and this line does not. Print the new id with
+#
+#   node --import tsx -e 'import("./scripts/lib/rubric").then((m) => console.log(m.rubricId(".")))'
+#
+# and commit it with the change. Scores under two different ids are not
+# comparable.
+rubric: maintenance-console@0f3acd25cedc
+
+# Outer docker timeout, 32 min: two more than agy's own 30. It must exceed
+# printTimeout so agy's own timeout status is what gets recorded rather than
+# a docker kill; run-matrix.ts refuses to start if it does not.
+timeoutMs: 1920000
+printTimeout: 30m
+
+attempts: 5
+
+# null: log `agy -p "/usage"` before each attempt and proceed.
+# A number, in percent: before each attempt, stop the matrix when the /usage
+# bucket of the row about to run is below it. Each row names its bucket with
+# `usageLabel` (its label in the /usage table, e.g. `Claude Sonnet 4.6
+# (Thinking)`); the loader refuses a number while a row has none, because an
+# unlabelled reading takes the lowest bucket on the account. A label missing
+# from the output stops the matrix too. A stopped matrix writes no run.json, so
+# a rerun after the bucket resets picks the attempt up.
+quotaFloor: 10
+
+# Copied out of the `agy-creds` volume into each attempt's throwaway HOME, and
+# nothing else: no conversation history, no project state, never the host's
+# ~/.gemini.
+#
+# Paths are relative to the volume root, and the layout is reproduced in the
+# throwaway HOME (`cp --parents`). agy's file store is
+# `$HOME/.gemini/antigravity-cli/`, not the top of $HOME — a flat copy lands
+# somewhere agy never looks.
+#
+# The token's filename was found by listing the volume after sign-in:
+#
+#   docker run --rm --pull never --entrypoint sh -v agy-creds:/home/agy \
+#       agrav-bench/harness:2026-10-04 -c 'find /home/agy -type f'
+#
+# Not `find -newer /etc/hostname`: that file is stamped at container creation, so
+# every pre-existing file on the volume is older than it and the find is always
+# empty. And the listing is never empty either way — agy writes .gemini/ on its
+# first launch, signed in or not — so what tells you sign-in worked is a *new*
+# file next to installation_id, or `run-attempt --models` listing models.
+credentialFiles:
+  - .gemini/antigravity-cli/antigravity-oauth-token
+  - .gemini/antigravity-cli/installation_id
+
+# The matrix. Every `model:` is an id `run-attempt --models` lists.
+#
+# **The effort level is part of the CLI model id, not a free axis.** agy
+# (checked on 1.1.26 and 1.2.7 — see images/harness/IMAGE.md) publishes
+# `gemini-3.8-flash-high` / `-medium` / `-low` as three separate ids,
+# and rejects any `--effort` that disagrees with the suffix
+# (`--model gemini-3.8-flash-low conflicts with --effort=high`, exit 1). Three
+# models have no effort levels at all and reject the flag outright
+# (`--effort is not supported for model "claude-sonnet-4-6"`), so those rows
+# carry `effort: null` and run-matrix.ts omits the flag.
+#
+# Every `model:` here is an id the catalogue actually lists. A bare
+# `gemini-3.8-flash` also works with `--effort`, but unlisted ids are inference;
+# these are measured.
+#
+# agy's catalogue moves: an id it no longer lists fails every attempt with
+# exit 1. Re-check the ids with `run-attempt --models` before a matrix run.
+#
+# The `-high` on the two Claude rows and the `-med` on GPT-OSS are labels, not
+# CLI arguments: agy calls them "(Thinking)" and "(Medium)" and offers no other
+# level. The suffix stays because the id is a directory name and a dashboard
+# label, and every id in this file carries one.
+#
+# Five rows: Gemini 3.8 Flash at two effort levels (High and Medium), Gemini 3.1
+# Pro (High), Claude Sonnet 4.6 and Claude Opus 4.6 (Thinking). Other ids — 3.8
+# Flash Low, 3.7 Flash High, 3.1 Pro Low, GPT-OSS-120B — are known to
+# `eval-attempts/metadata.ts`, so adding one is a one-line change here. The hard
+# and brownfield runners carry the same rows without 3.8 Flash Medium.
+matrix:
+  - { id: gemini-38-flash-high,  model: gemini-3.8-flash-high,     effort: high,   family: gemini-38-flash,   usageLabel: "Gemini 3.8 Flash (High)" }
+  - { id: gemini-38-flash-med,   model: gemini-3.8-flash-medium,   effort: medium, family: gemini-38-flash,   usageLabel: "Gemini 3.8 Flash (Medium)" }
+  - { id: gemini-31-pro-high,    model: gemini-3.1-pro-high,       effort: high,   family: gemini-31-pro,     usageLabel: "Gemini 3.1 Pro (High)" }
+  - { id: claude-sonnet-46-high, model: claude-sonnet-4-6,         effort: null,   family: claude-sonnet-46,  usageLabel: "Claude Sonnet 4.6 (Thinking)" }
+  - { id: claude-opus-46-high,   model: claude-opus-4-6-thinking,  effort: null,   family: claude-opus-46,    usageLabel: "Claude Opus 4.6 (Thinking)" }

@@ -1,0 +1,26 @@
+# The hard-track benchmark matrix. Same schema as runner.yaml.
+image: agrav-bench/harness:2026-10-04
+agyVersion: 1.2.7
+
+judge: claude-opus-5-5
+
+rubric: maintenance-console-hard@a0d3c3d39eb1
+
+# Outer docker timeout, 47 min: two more than agy's own 45.
+timeoutMs: 2820000
+printTimeout: 45m
+
+attempts: 5
+
+quotaFloor: 10
+
+credentialFiles:
+  - .gemini/antigravity-cli/antigravity-oauth-token
+  - .gemini/antigravity-cli/installation_id
+
+# The classic matrix's rows without gemini-38-flash-med.
+matrix:
+  - { id: gemini-38-flash-high,  model: gemini-3.8-flash-high,     effort: high,   family: gemini-38-flash,   usageLabel: "Gemini 3.8 Flash (High)" }
+  - { id: gemini-31-pro-high,    model: gemini-3.1-pro-high,       effort: high,   family: gemini-31-pro,     usageLabel: "Gemini 3.1 Pro (High)" }
+  - { id: claude-sonnet-46-high, model: claude-sonnet-4-6,         effort: null,   family: claude-sonnet-46,  usageLabel: "Claude Sonnet 4.6 (Thinking)" }
+  - { id: claude-opus-46-high,   model: claude-opus-4-6-thinking,  effort: null,   family: claude-opus-46,    usageLabel: "Claude Opus 4.6 (Thinking)" }

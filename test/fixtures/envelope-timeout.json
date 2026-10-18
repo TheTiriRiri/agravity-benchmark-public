@@ -1,0 +1,1 @@
+{"conversation_id": "9a0b1c2d-0000-4000-8000-0123456789ab", "status": "ERROR", "response": "", "error": "print timeout of 15m0s reached", "duration_seconds": 900.0, "num_turns": 18, "usage": {"input_tokens": 58000, "output_tokens": 12000, "thinking_tokens": 4000, "cache_read_tokens": 0, "total_tokens": 70000}}

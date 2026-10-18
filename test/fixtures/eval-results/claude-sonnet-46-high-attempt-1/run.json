@@ -1,0 +1,14 @@
+{
+  "id": "claude-sonnet-46-high",
+  "model": "claude-sonnet-4-6",
+  "effort": "high",
+  "agyVersion": "1.1.26",
+  "image": "agrav-bench/harness:2026-09-05@sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "startedAt": "2026-09-04T18:30:00.000Z",
+  "durationMs": 3000,
+  "exitCode": 1,
+  "envelope": null,
+  "stderrTail": "Error: tool \"WebFetch\" was soft-denied by settings.json permissions\n",
+  "softDenied": true,
+  "failureKind": "infra"
+}

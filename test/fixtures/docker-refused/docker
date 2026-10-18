@@ -1,0 +1,10 @@
+#!/bin/sh
+# `docker` once a fake-docker suite's `after` hook has begun
+# (test/fixtures/fake-docker-backend-hooks.ts). Backend work a failing test
+# left pending can still reach for `docker` after that hook; were PATH simply
+# restored, it would reach the machine's real client, with an image that may
+# exist here. This answers every call with a failure instead. It touches no
+# file, and never says "No such container", which a caller would read as a
+# proven removal.
+printf 'docker refused: the fake-docker tests are over; no call may reach a real daemon (docker %s)\n' "$*" >&2
+exit 125

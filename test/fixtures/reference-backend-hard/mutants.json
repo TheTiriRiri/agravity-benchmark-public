@@ -1,0 +1,60 @@
+{
+  "crew_single": [
+    "planner-crews-travel.test.ts"
+  ],
+  "crew_check_first_only": [
+    "planner-crews-travel.test.ts"
+  ],
+  "crew_tie_reversed": [
+    "planner-crews-travel.test.ts"
+  ],
+  "site_first_only": [
+    "planner-crews-travel.test.ts"
+  ],
+  "travel_off": [
+    "planner-crews-travel.test.ts"
+  ],
+  "travel_cap_off": [
+    "planner-crews-travel.test.ts"
+  ],
+  "travel_previous_only": [
+    "planner-crews-travel.test.ts"
+  ],
+  "absence_ignored": [
+    "planner-crews-travel.test.ts"
+  ],
+  "absence_touch_blocks": [
+    "planner-crews-travel.test.ts"
+  ],
+  "holiday_ignored": [
+    "planner-crews-travel.test.ts"
+  ],
+  "split_eager": [
+    "planner-split-preempt.test.ts"
+  ],
+  "split_min_ignored": [
+    "planner-split-preempt.test.ts"
+  ],
+  "split_short_first": [
+    "planner-split-preempt.test.ts"
+  ],
+  "preempt_unfiltered": [
+    "planner-split-preempt.test.ts"
+  ],
+  "preempt_evict_all": [
+    "planner-split-preempt.test.ts"
+  ],
+  "preempt_parts_after": [
+    "planner-split-preempt.test.ts"
+  ],
+  "preempt_no_reprocess": [
+    "api-contract.test.ts",
+    "planner-split-preempt.test.ts"
+  ],
+  "preempt_reprocess_each_round": [
+    "planner-split-preempt.test.ts"
+  ],
+  "edf_priority_first": [
+    "planner-ordering.test.ts"
+  ]
+}

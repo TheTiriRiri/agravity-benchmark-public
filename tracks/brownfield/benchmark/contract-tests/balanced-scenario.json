@@ -1,0 +1,61 @@
+{
+  "week_start": "2026-10-12",
+  "orders": [
+    {
+      "title": "Electrical inspection line 1",
+      "asset_id": "A-001",
+      "required_skill": "electrical",
+      "duration_minutes": 240,
+      "earliest_start": "2026-10-12",
+      "due_date": "2026-10-16",
+      "priority": "medium",
+      "parts": []
+    },
+    {
+      "title": "Calibrate conveyor motor",
+      "asset_id": "A-001",
+      "required_skill": "electrical",
+      "duration_minutes": 240,
+      "earliest_start": "2026-10-13",
+      "due_date": "2026-10-16",
+      "priority": "medium",
+      "parts": []
+    },
+    {
+      "title": "Check electrical cabinet wiring",
+      "asset_id": "A-001",
+      "required_skill": "electrical",
+      "duration_minutes": 240,
+      "earliest_start": "2026-10-14",
+      "due_date": "2026-10-16",
+      "priority": "medium",
+      "parts": []
+    },
+    {
+      "title": "Test emergency stop electrical loop",
+      "asset_id": "A-001",
+      "required_skill": "electrical",
+      "duration_minutes": 240,
+      "earliest_start": "2026-10-15",
+      "due_date": "2026-10-16",
+      "priority": "medium",
+      "parts": []
+    }
+  ],
+  "expected_earliest": {
+    "technician_load": {
+      "T-001": 960,
+      "T-002": 0,
+      "T-003": 0,
+      "T-004": 0
+    }
+  },
+  "expected_balanced": {
+    "technician_load": {
+      "T-001": 480,
+      "T-002": 480,
+      "T-003": 0,
+      "T-004": 0
+    }
+  }
+}

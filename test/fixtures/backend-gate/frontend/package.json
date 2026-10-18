@@ -1,0 +1,11 @@
+{
+  "name": "gate-3a-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Gate 3a's stand-in for an attempt's Vite SPA: no dependencies, one page, a Vite-format banner.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "node -e 0"
+  }
+}

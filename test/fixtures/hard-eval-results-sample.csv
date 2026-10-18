@@ -1,0 +1,17 @@
+Criterion,Score,Max,Notes
+Task completion time,14min 30s,N/A,14min 30s
+Test run,3.03.2030 09:15,N/A,3.03.2030 09:15
+Local build,1,1,"backend booted; frontend built and dev server served on 5173"
+API contract,1.86,2,"27 of 29 passed"
+Planner: assignment rules,1.83,2,"11 of 12 passed"
+Planner: ordering & determinism,0.82,1,"9 of 11 passed"
+Planner: parts & blocking,1.82,2,"10 of 11 passed"
+Planner: crews & travel,1.6,2,"8 of 10 passed"
+Planner: splitting & preemption,1.38,2,"9 of 13 passed"
+Frontend E2E: flows,0.8,2,"4 of 10 passed"
+Frontend E2E: layout & a11y,0.62,1,"5 of 8 passed"
+Code structure,0.5,1,"heuristic (not judged): store, planner, routes, schemas, api found; types, plannerIsolated missing"
+Tech stack & run contract,1,1,"heuristic (not judged): backend, frontend, readme, requirements, packageJson, viteProxy found"
+Self-verification,1,1,"heuristic (not judged): 4 model-written tests found"
+Visual design,0,1,"default 0, not human-reviewed (criteria require a human score)"
+Penalty,0,N/A,"not assessed (no judge)"

@@ -1,0 +1,7 @@
+# gate 3a fixture: the first requirement does not exist on PyPI (an invented name),
+# so pip fails while the PyPI probe succeeds: an `install` stop. Its version is a
+# local one (`+never`), which PyPI refuses to host, so even if someone registers
+# the name, no file they publish can satisfy the pin and run in the gate.
+agrav-gate-3a-invented-package-does-not-exist==0.0.0+never
+fastapi==0.115.14
+uvicorn==0.30.6

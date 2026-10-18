@@ -1,0 +1,3 @@
+# gate 3a fixture: pinned as test/fixtures/reference-backend/requirements.txt pins them.
+fastapi==0.115.14
+uvicorn==0.30.6

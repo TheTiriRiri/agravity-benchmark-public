@@ -1,0 +1,15 @@
+Criterion,Score,Max,Notes
+Task completion time,N/A,N/A,N/A
+Test run,5.09.2026 09:15,N/A,5.09.2026 09:15
+Local build,1,1,"Backend installed and answered /api/v1/health; npm run build succeeded"
+API contract,2,2,"24/24 passed"
+Planner: assignment rules,1,2,"6/12 passed; failed: fixture failure 1 | fixture failure 2 | fixture failure 3 | fixture failure 4 | fixture failure 5 | fixture failure 6; most failures at GET /schedule"
+Planner: ordering & determinism,1,1,"11/11 passed"
+Planner: parts & blocking,2,2,"11/11 passed"
+Frontend–API integration,0.5,1,"The list reads the API, but the schedule view renders a hard-coded sample"
+Code structure,1,1,"Planner, routes and storage in separate modules; no duplicated rules"
+Tech stack & run contract,0,1,"The backend is Flask, not FastAPI"
+Manual testing,1,1,"Created, scheduled and completed a work order end to end"
+Consistent UI,1,1,"One layout, one type scale and one set of controls on every screen"
+Responsive design,0,1,"The schedule table overflows below 640px"
+Penalty,0,N/A,"No penalty applied"

@@ -1,0 +1,807 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { marked } from 'marked';
+import { readFileSync } from 'node:fs';
+import { RUBRIC_ROWS } from '../../../scripts/lib/rubric';
+import { HARD_RUBRIC_ROWS } from '../../../scripts/lib/hard-rubric';
+import { BROWNFIELD_RUBRIC_ROWS, getRequiredRowMax } from '../../../scripts/lib/brownfield-rubric';
+import { computeRubricStats, countLines, parseRunnerMeta } from '../components/benchmarkStats';
+
+const title = 'Benchmark Task & Scoring Criteria — agrav-bench';
+const description =
+  'The exact prompt and evaluation criteria every Antigravity CLI model is graded against in agrav-bench across classic, hard, and brownfield tracks, scored by hidden API tests and a judge.';
+
+const repoRoot = new URL('../../../', import.meta.url);
+
+function readRepoFile(relativePath: string): string {
+  try {
+    return readFileSync(new URL(relativePath, repoRoot), 'utf8');
+  } catch (error) {
+    throw new Error(
+      `benchmark.astro: cannot read ${relativePath} from the repo root. ` +
+        'It is part of this repo and the page renders it verbatim — restore it ' +
+        `before building. (${(error as Error).message})`
+    );
+  }
+}
+
+// Classic track
+const promptClassicMd = readRepoFile('prompt.md');
+const criteriaClassicMd = readRepoFile('benchmark/criteria.md');
+const runnerClassicYaml = readRepoFile('benchmark/runner.yaml');
+
+// Hard track
+const promptHardMd = readRepoFile('tracks/console-hard/prompt.md');
+const criteriaHardMd = readRepoFile('tracks/console-hard/benchmark/criteria.md');
+const runnerHardYaml = readRepoFile('benchmark/runner-hard.yaml');
+
+// Brownfield track
+const promptBrownfieldMd = readRepoFile('tracks/brownfield/prompt.md');
+const criteriaBrownfieldMd = readRepoFile('tracks/brownfield/benchmark/criteria.md');
+const runnerBrownfieldYaml = readRepoFile('tracks/brownfield/benchmark/runner.yaml');
+
+const promptClassicContent = await marked(promptClassicMd);
+const criteriaClassicContent = await marked(criteriaClassicMd);
+
+const promptHardContent = await marked(promptHardMd);
+const criteriaHardContent = await marked(criteriaHardMd);
+
+const promptBrownfieldContent = await marked(promptBrownfieldMd);
+const criteriaBrownfieldContent = await marked(criteriaBrownfieldMd);
+
+const classicStats = computeRubricStats(RUBRIC_ROWS);
+const hardStats = computeRubricStats(HARD_RUBRIC_ROWS);
+const brownfieldStats = computeRubricStats(BROWNFIELD_RUBRIC_ROWS);
+
+const regressionMax = getRequiredRowMax(BROWNFIELD_RUBRIC_ROWS, 'Regression');
+const changeSuiteMax = getRequiredRowMax(BROWNFIELD_RUBRIC_ROWS, 'Change suite');
+const diffLocalityMax = getRequiredRowMax(BROWNFIELD_RUBRIC_ROWS, 'Diff locality');
+
+const classicHiddenCount = RUBRIC_ROWS.filter((r) => r.scoredBy === 'hidden').length;
+const classicHumanCount = RUBRIC_ROWS.filter((r) => r.scoredBy === 'human').length;
+
+const classicRunner = parseRunnerMeta(runnerClassicYaml, 'benchmark/runner.yaml');
+const hardRunner = parseRunnerMeta(runnerHardYaml, 'benchmark/runner-hard.yaml');
+const brownfieldRunner = parseRunnerMeta(runnerBrownfieldYaml, 'tracks/brownfield/benchmark/runner.yaml');
+
+const classicMeta = {
+  ...classicRunner,
+  promptLines: countLines(promptClassicMd),
+  criteriaLines: countLines(criteriaClassicMd),
+};
+
+const hardMeta = {
+  ...hardRunner,
+  promptLines: countLines(promptHardMd),
+  criteriaLines: countLines(criteriaHardMd),
+};
+
+const brownfieldMeta = {
+  ...brownfieldRunner,
+  promptLines: countLines(promptBrownfieldMd),
+  criteriaLines: countLines(criteriaBrownfieldMd),
+};
+---
+
+<Layout title={title} description={description}>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    
+    <!-- Breadcrumb & Header -->
+    <div class="mb-8">
+      <nav class="flex items-center gap-2 text-sm text-slate-400 mb-3">
+        <a href="/" class="hover:text-slate-200 transition-colors">Results</a>
+        <span>/</span>
+        <span class="text-slate-200">Benchmark Details</span>
+      </nav>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Benchmark Specification & Criteria</h1>
+      <p class="mt-2 text-base sm:text-lg text-slate-300 max-w-3xl">
+        Kompletny kontrakt zadania, pełna treść promptu, rubryka oceniania i metodologia scoringu dla wszystkich torów Antigravity CLI.
+      </p>
+    </div>
+
+    <!-- Track Selector -->
+    <div id="track-selector" class="mb-8">
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Wybierz tor benchmarku:</div>
+      <div role="tablist" class="inline-flex rounded-lg bg-slate-800 p-1 border border-slate-700 shadow-sm">
+        <button
+          id="track-btn-classic"
+          role="tab"
+          aria-selected="true"
+          class="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-blue-600 text-white shadow-sm"
+        >
+          Classic
+        </button>
+        <button
+          id="track-btn-hard"
+          role="tab"
+          aria-selected="false"
+          class="px-4 py-2 text-sm font-medium rounded-md transition-colors text-slate-400 hover:text-slate-200"
+        >
+          Hard
+        </button>
+        <button
+          id="track-btn-brownfield"
+          role="tab"
+          aria-selected="false"
+          class="px-4 py-2 text-sm font-medium rounded-md transition-colors text-slate-400 hover:text-slate-200"
+        >
+          Brownfield
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Pills -->
+    <div class="sticky top-2 z-20 bg-slate-900/90 backdrop-blur-md p-2 rounded-xl border border-slate-700/80 shadow-xl mb-10 overflow-x-auto">
+      <div class="flex items-center gap-2 text-sm whitespace-nowrap px-1">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 px-2">Skocz do:</span>
+        <a href="#key-specs-section" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition font-medium text-xs sm:text-sm">
+          📦 Specyfikacja zadania
+        </a>
+        <a href="#how-it-works-section" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition font-medium text-xs sm:text-sm">
+          ⚙️ Jak działa benchmark
+        </a>
+        <a href="#prompt-section" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition font-medium text-xs sm:text-sm">
+          📝 Treść promptu
+        </a>
+        <a href="#criteria-section" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition font-medium text-xs sm:text-sm">
+          🎯 Kryteria oceny
+        </a>
+        <a href="#judge-section" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition font-medium text-xs sm:text-sm">
+          ⚖️ Sędzia i wersja
+        </a>
+        <a href="#penalties" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition font-medium text-xs sm:text-sm">
+          ⚠️ Kary (Penalties)
+        </a>
+      </div>
+    </div>
+
+    <!-- TRACK PANEL: CLASSIC -->
+    <div id="track-panel-classic" class="track-panel">
+      <!-- Key Specifications Summary Cards -->
+      <div id="key-specs-section" class="mb-12 scroll-mt-24">
+        <h2 class="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>📦</span> Podsumowanie wymagań (Tor Classic — Meridian Maintenance Console)
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-sky-400 mb-1">Backend</div>
+            <div class="text-slate-100 font-bold text-base mb-1">FastAPI + Python 3.11</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              In-memory store, uvicorn na porcie <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">5100</code>. REST API pod <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">/api/v1/</code>.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">Frontend</div>
+            <div class="text-slate-100 font-bold text-base mb-1">React + Vite + Tailwind</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              SPA na porcie <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">5173</code>, proxy <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">/api</code>. Dashboard, Harmonogram, Zlecenia, Magazyn.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1">Algorytm</div>
+            <div class="text-slate-100 font-bold text-base mb-1">Planista Serwisowy</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Deterministyczny algorytm: przypisanie techników, kwalifikacje, okna czasowe i rezerwacja części magazynowych.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">Punktacja</div>
+            <div class="text-slate-100 font-bold text-base mb-1">{classicStats.max.toFixed(1)} Punktów Max</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              {classicStats.hidden} pkt z ukrytych testów automatycznych + {classicStats.auto} pkt auto + {classicStats.judgeManual} pkt z weryfikacji sędziego i testów manualnych człowieka.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- How a run happens -->
+      <div id="how-it-works-section" class="mb-12 scroll-mt-24">
+        <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>⚙️</span> Jak działa wykonanie benchmarku (Classic)
+        </h2>
+        <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-4">
+          <p class="text-slate-300 text-base leading-relaxed">
+            Każda próba to jedno wywołanie <strong>Antigravity CLI</strong> w trybie headless w wyizolowanym kontenerze Docker (zgodnym z przypiętym obrazem). Model otrzymuje wyłącznie treść promptu i specyfikację.
+          </p>
+          <p class="text-slate-300 text-base leading-relaxed">
+            Podstawową jednostką porównawczą jest para <strong class="text-white">(model, poziom wysiłku)</strong>, np. <code class="text-sky-300 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">--effort high</code>. Modele tej samej rodziny są grupowane na stronie wyników.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-700">
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Agent CLI</span>
+              <span class="text-slate-200 font-medium">Antigravity CLI{classicMeta.agyVersion ? ` ${classicMeta.agyVersion}` : ''}</span>
+            </div>
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Próby (Attempts)</span>
+              <span class="text-slate-200 font-medium">{classicMeta.attempts ? `${classicMeta.attempts} na konfigurację` : 'zgodnie z runner.yaml'}</span>
+            </div>
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Rubryka</span>
+              <span class="text-slate-200 font-medium">{classicMeta.rubric}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt Section -->
+      <div id="prompt-section" class="mb-12 scroll-mt-24">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            <span>📝</span> Pełna treść promptu (Task Prompt — Classic)
+          </h2>
+          <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700 font-mono">
+            prompt.md • {classicMeta.promptLines} linii
+          </span>
+        </div>
+
+        <details open class="group bg-slate-800/90 rounded-xl border border-slate-700/80 shadow-sm overflow-hidden">
+          <summary class="cursor-pointer select-none bg-slate-800 px-6 py-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-750 transition">
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-slate-200">Kliknij, aby zwinąć / rozwinąć pełny prompt</span>
+            </div>
+            <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform duration-200">▼</span>
+          </summary>
+          
+          <div class="p-6 sm:p-8 bg-slate-900/60 overflow-x-auto">
+            <div class="markdown-body prose prose-invert prose-base max-w-none prose-slate">
+              <Fragment set:html={promptClassicContent} />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Criteria Section -->
+      <div id="criteria-section" class="mb-12 scroll-mt-24">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            <span>🎯</span> Kryteria Oceny (Evaluation Criteria — Classic)
+          </h2>
+          <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700 font-mono">
+            criteria.md • {classicMeta.criteriaLines} linii
+          </span>
+        </div>
+
+        <details open class="group bg-slate-800/90 rounded-xl border border-slate-700/80 shadow-sm overflow-hidden">
+          <summary class="cursor-pointer select-none bg-slate-800 px-6 py-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-750 transition">
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-slate-200">Kliknij, aby zwinąć / rozwinąć kryteria rubryki</span>
+            </div>
+            <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform duration-200">▼</span>
+          </summary>
+          
+          <div class="p-6 sm:p-8 bg-slate-900/60 overflow-x-auto">
+            <div class="markdown-body prose prose-invert prose-base max-w-none prose-slate">
+              <Fragment set:html={criteriaClassicContent} />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Judge Section -->
+      <div id="judge-section" class="mb-12 scroll-mt-24">
+        <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>⚖️</span> Sędzia (Judge) i niezmiennik rubryki (Classic)
+        </h2>
+        <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-3">
+          <p class="text-slate-300 text-base leading-relaxed">
+            Oceny dokonuje sędzia <code class="text-sky-300 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">{classicMeta.judge}</code> poprzez narzędzie asystenta agy/claude, ściśle według reguł rubryki <code class="text-sky-300 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">{classicMeta.rubric}</code>.
+          </p>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Wyniki są bezpośrednio porównywalne tylko w ramach tej samej wersji rubryki i sędziego. {classicHiddenCount} wiersze testów ukrytych pochodzą w 100% z automatycznych testów kontraktowych, a {classicHumanCount} wiersze interfejsu są weryfikowane przez człowieka na żywej aplikacji.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRACK PANEL: HARD -->
+    <div id="track-panel-hard" class="track-panel hidden">
+      <!-- Key Specifications Summary Cards -->
+      <div class="mb-12 scroll-mt-24">
+        <h2 class="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>📦</span> Podsumowanie wymagań (Tor Hard — Meridian Maintenance Console)
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-sky-400 mb-1">Backend</div>
+            <div class="text-slate-100 font-bold text-base mb-1">FastAPI + Python 3.11</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              In-memory store, uvicorn na porcie <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">5100</code>. REST API pod <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">/api/v1/</code>.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">Frontend</div>
+            <div class="text-slate-100 font-bold text-base mb-1">React + Vite + Tailwind</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              SPA na porcie <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">5173</code>, proxy <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">/api</code>. Złożone interakcje, walidacje i E2E.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">Algorytm</div>
+            <div class="text-slate-100 font-bold text-base mb-1">Zaawansowany Planista</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Wieloosobowe ekipy (crews), czasy dojazdu (travel time), preemption oraz dzielenie zleceń (splitting).
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">Punktacja</div>
+            <div class="text-slate-100 font-bold text-base mb-1">{hardStats.max.toFixed(1)} Punktów Max</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              {hardStats.hidden} pkt z ukrytych testów automatycznych i E2E + {hardStats.auto} pkt auto + {hardStats.judgeManual} pkt sędzia/człowiek.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- How a run happens -->
+      <div class="mb-12 scroll-mt-24">
+        <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>⚙️</span> Jak działa wykonanie benchmarku (Hard)
+        </h2>
+        <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-4">
+          <p class="text-slate-300 text-base leading-relaxed">
+            Tor Hard rozszerza specyfikację o wymagania wysokiej złożoności: dzielenie zleceń, wywłaszczanie (preemption), ekipy techników i dojazdy między lokalizacjami.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-700">
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Agent CLI</span>
+              <span class="text-slate-200 font-medium">Antigravity CLI{hardMeta.agyVersion ? ` ${hardMeta.agyVersion}` : ''}</span>
+            </div>
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Próby (Attempts)</span>
+              <span class="text-slate-200 font-medium">{hardMeta.attempts ? `${hardMeta.attempts} na konfigurację` : 'zgodnie z runner-hard.yaml'}</span>
+            </div>
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Rubryka</span>
+              <span class="text-slate-200 font-medium">{hardMeta.rubric}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt Section -->
+      <div class="mb-12 scroll-mt-24">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            <span>📝</span> Pełna treść promptu (Task Prompt — Hard)
+          </h2>
+          <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700 font-mono">
+            tracks/console-hard/prompt.md • {hardMeta.promptLines} linii
+          </span>
+        </div>
+
+        <details open class="group bg-slate-800/90 rounded-xl border border-slate-700/80 shadow-sm overflow-hidden">
+          <summary class="cursor-pointer select-none bg-slate-800 px-6 py-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-750 transition">
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-slate-200">Kliknij, aby zwinąć / rozwinąć pełny prompt toru Hard</span>
+            </div>
+            <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform duration-200">▼</span>
+          </summary>
+          
+          <div class="p-6 sm:p-8 bg-slate-900/60 overflow-x-auto">
+            <div class="markdown-body prose prose-invert prose-base max-w-none prose-slate">
+              <Fragment set:html={promptHardContent} />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Criteria Section -->
+      <div class="mb-12 scroll-mt-24">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            <span>🎯</span> Kryteria Oceny (Evaluation Criteria — Hard)
+          </h2>
+          <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700 font-mono">
+            tracks/console-hard/benchmark/criteria.md • {hardMeta.criteriaLines} linii
+          </span>
+        </div>
+
+        <details open class="group bg-slate-800/90 rounded-xl border border-slate-700/80 shadow-sm overflow-hidden">
+          <summary class="cursor-pointer select-none bg-slate-800 px-6 py-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-750 transition">
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-slate-200">Kliknij, aby zwinąć / rozwinąć kryteria rubryki Hard</span>
+            </div>
+            <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform duration-200">▼</span>
+          </summary>
+          
+          <div class="p-6 sm:p-8 bg-slate-900/60 overflow-x-auto">
+            <div class="markdown-body prose prose-invert prose-base max-w-none prose-slate">
+              <Fragment set:html={criteriaHardContent} />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Judge Section -->
+      <div class="mb-12 scroll-mt-24">
+        <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>⚖️</span> Sędzia (Judge) i niezmiennik rubryki (Hard)
+        </h2>
+        <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-3">
+          <p class="text-slate-300 text-base leading-relaxed">
+            Oceny dokonuje sędzia <code class="text-sky-300 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">{hardMeta.judge}</code>, ściśle według reguł rubryki <code class="text-sky-300 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">{hardMeta.rubric}</code>.
+          </p>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            {hardStats.hidden} punktów testów automatycznych daje sześć plików ukrytych testów kontraktowych (kontrakt API, przydział, kolejność, części, ekipy i dojazdy, dzielenie i wywłaszczanie) oraz dwa zestawy testów E2E w Playwright (przepływy oraz układ i dostępność).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRACK PANEL: BROWNFIELD -->
+    <div id="track-panel-brownfield" class="track-panel hidden">
+      <!-- Key Specifications Summary Cards -->
+      <div class="mb-12 scroll-mt-24">
+        <h2 class="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>📦</span> Podsumowanie wymagań (Tor Brownfield — Meridian Maintenance Console)
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1">Baza kodu</div>
+            <div class="text-slate-100 font-bold text-base mb-1">Zamrożona baza FastAPI</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Model modyfikuje istniejący kod z <code class="text-emerald-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">tracks/brownfield/base</code> bez nadpisywania całego projektu.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">Funkcja</div>
+            <div class="text-slate-100 font-bold text-base mb-1">strategy=balanced</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Zrównoważone obciążenie techników w <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">POST /plan</code> oraz nowe pole <code class="text-sky-300 font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-700">technician_load</code>.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-sky-400 mb-1">Niezmienniki</div>
+            <div class="text-slate-100 font-bold text-base mb-1">Regresja + Zestaw zmian</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              58 testów regresji bazy uruchamia się ponownie, a punkty są proporcjonalne do zaliczonych (zaliczone/58 × 4). Zestaw zmian weryfikuje poprawność bilansowania.
+            </p>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">Punktacja</div>
+            <div class="text-slate-100 font-bold text-base mb-1">{brownfieldStats.max.toFixed(1)} Punktów Max</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              {brownfieldStats.hidden} pkt z testów ukrytych (Regression 4, Change suite 3) + {brownfieldStats.auto} pkt auto (Local build 1, Diff locality 1) + {brownfieldStats.judgeManual} pkt agent/człowiek (Code structure, Self-verification, Visual design).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- How a run happens -->
+      <div class="mb-12 scroll-mt-24">
+        <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>⚙️</span> Jak działa wykonanie benchmarku (Brownfield)
+        </h2>
+        <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-4">
+          <p class="text-slate-300 text-base leading-relaxed">
+            Tor Brownfield testuje umiejętność modyfikowania istniejącego kodu: agent otrzymuje pre-populowany workspace z działającą aplikacją FastAPI i zadaniem implementacji zrównoważonego planowania bez psucia dotychczasowych funkcji.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-700">
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Agent CLI</span>
+              <span class="text-slate-200 font-medium">Antigravity CLI{brownfieldMeta.agyVersion ? ` ${brownfieldMeta.agyVersion}` : ''}</span>
+            </div>
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Próby (Attempts)</span>
+              <span class="text-slate-200 font-medium">{brownfieldMeta.attempts ? `${brownfieldMeta.attempts} na konfigurację` : 'zgodnie z runner.yaml'}</span>
+            </div>
+            <div>
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block mb-1">Rubryka</span>
+              <span class="text-slate-200 font-medium">{brownfieldMeta.rubric}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt Section -->
+      <div class="mb-12 scroll-mt-24">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            <span>📝</span> Pełna treść promptu (Task Prompt — Brownfield)
+          </h2>
+          <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700 font-mono">
+            tracks/brownfield/prompt.md • {brownfieldMeta.promptLines} linii
+          </span>
+        </div>
+
+        <details open class="group bg-slate-800/90 rounded-xl border border-slate-700/80 shadow-sm overflow-hidden">
+          <summary class="cursor-pointer select-none bg-slate-800 px-6 py-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-750 transition">
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-slate-200">Kliknij, aby zwinąć / rozwinąć pełny prompt toru Brownfield</span>
+            </div>
+            <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform duration-200">▼</span>
+          </summary>
+          
+          <div class="p-6 sm:p-8 bg-slate-900/60 overflow-x-auto">
+            <div class="markdown-body prose prose-invert prose-base max-w-none prose-slate">
+              <Fragment set:html={promptBrownfieldContent} />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Criteria Section -->
+      <div class="mb-12 scroll-mt-24">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            <span>🎯</span> Kryteria Oceny (Evaluation Criteria — Brownfield)
+          </h2>
+          <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700 font-mono">
+            tracks/brownfield/benchmark/criteria.md • {brownfieldMeta.criteriaLines} linii
+          </span>
+        </div>
+
+        <details open class="group bg-slate-800/90 rounded-xl border border-slate-700/80 shadow-sm overflow-hidden">
+          <summary class="cursor-pointer select-none bg-slate-800 px-6 py-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-750 transition">
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-slate-200">Kliknij, aby zwinąć / rozwinąć kryteria rubryki Brownfield</span>
+            </div>
+            <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform duration-200">▼</span>
+          </summary>
+          
+          <div class="p-6 sm:p-8 bg-slate-900/60 overflow-x-auto">
+            <div class="markdown-body prose prose-invert prose-base max-w-none prose-slate">
+              <Fragment set:html={criteriaBrownfieldContent} />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Judge Section -->
+      <div class="mb-12 scroll-mt-24">
+        <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <span>⚖️</span> Sędzia (Judge) i niezmiennik rubryki (Brownfield)
+        </h2>
+        <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-3">
+          <p class="text-slate-300 text-base leading-relaxed">
+            Oceny dokonuje sędzia <code class="text-sky-300 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">{brownfieldMeta.judge}</code>, ściśle według {BROWNFIELD_RUBRIC_ROWS.length} wierszy rubryki <code class="text-sky-300 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">{brownfieldMeta.rubric}</code>.
+          </p>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            3 wiersze liczone przez narzędzie (contract-results-brownfield) — Regression: {regressionMax} pkt, Change suite: {changeSuiteMax} pkt, Diff locality: {diffLocalityMax} pkt — weryfikują poprawność implementacji oraz nienaruszalność bazy kodu.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Penalties Section (Shared) -->
+    <div id="penalties" class="mb-12 scroll-mt-24">
+      <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+        <span>⚠️</span> Kary za naruszenia (Penalties)
+      </h2>
+      <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-4">
+        <p class="text-slate-300 text-base leading-relaxed">
+          Kara to opcjonalne potrącenie punktowe od sumy punktów (od 0 do 1.0 pkt), stosowane w przypadku naruszeń nieregulaminowych nieobjętych standardowymi kryteriami.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-slate-900/70 border border-green-900/50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-green-400">0 pkt</span>
+              <span class="text-xs text-slate-400 font-mono">Brak kary</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">Brak naruszeń. Próba mieści się w standardowych kryteriach rubryki.</p>
+          </div>
+          <div class="bg-slate-900/70 border border-amber-900/50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-400">0.5 pkt</span>
+              <span class="text-xs text-slate-400 font-mono">Drobne wady</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">Zauważalna wada poza kryteriami: fałszywe deklaracje w README, odpytywanie API w ciasnej pętli, zbędne artefakty.</p>
+          </div>
+          <div class="bg-slate-900/70 border border-red-900/50 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-red-400">1.0 pkt</span>
+              <span class="text-xs text-slate-400 font-mono">Naruszenie</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">Niebezpieczne operacje: skrypty pobierające kod z sieci, commity wrażliwych danych, nieautoryzowane endpointy.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cost Section (Shared) -->
+    <div id="costs" class="mb-12 scroll-mt-24">
+      <h2 class="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+        <span>💰</span> Szacowanie kosztów API
+      </h2>
+      <div class="bg-slate-800/90 p-6 rounded-xl border border-slate-700/80 shadow-sm space-y-3">
+        <p class="text-slate-300 text-base leading-relaxed">
+          Koszty prezentowane na stronie są <strong>szacunkiem według publicznych cenników dostawców</strong> (list price), a nie faktyczną fakturą. Benchmark uruchamiany jest w ramach subskrypcji Antigravity z tygodniową pulą zapytań (quota).
+        </p>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Liczba tokenów (wejściowe, wyjściowe, pamięć podręczna prompt cache) jest pobierana bezpośrednio z metadanych CLI dla każdej próby.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</Layout>
+
+<script>
+  function setupTrackSwitch() {
+    const tracks = ['classic', 'hard', 'brownfield'] as const;
+    type Track = typeof tracks[number];
+
+    const activeClasses: Record<Track, string[]> = {
+      classic: ['bg-blue-600', 'text-white', 'shadow-sm'],
+      hard: ['bg-amber-600', 'text-white', 'shadow-sm'],
+      brownfield: ['bg-emerald-600', 'text-white', 'shadow-sm'],
+    };
+    const inactiveClasses = ['text-slate-400', 'hover:text-slate-200'];
+
+    tracks.forEach((t) => {
+      const btn = document.getElementById(`track-btn-${t}`);
+      btn?.addEventListener('click', () => {
+        tracks.forEach((other) => {
+          const otherBtn = document.getElementById(`track-btn-${other}`);
+          const otherPanel = document.getElementById(`track-panel-${other}`);
+          if (other === t) {
+            otherBtn?.setAttribute('aria-selected', 'true');
+            otherBtn?.classList.remove(...inactiveClasses);
+            otherBtn?.classList.add(...activeClasses[other]);
+            otherPanel?.classList.remove('hidden');
+          } else {
+            otherBtn?.setAttribute('aria-selected', 'false');
+            otherBtn?.classList.remove(...activeClasses[other]);
+            otherBtn?.classList.add(...inactiveClasses);
+            otherPanel?.classList.add('hidden');
+          }
+        });
+      });
+    });
+  }
+
+  // Setup on page load
+  setupTrackSwitch();
+</script>
+
+<style is:global>
+  /* Markdown content styling */
+  .markdown-body {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body h4 {
+    color: #f8fafc;
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 0.35rem;
+  }
+
+  .markdown-body h1 { font-size: 1.75rem; }
+  .markdown-body h2 { font-size: 1.35rem; }
+  .markdown-body h3 { font-size: 1.15rem; }
+
+  .markdown-body p {
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
+    color: #cbd5e1;
+  }
+
+  .markdown-body ul {
+    list-style-type: disc !important;
+    padding-left: 1.75rem !important;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .markdown-body ol {
+    list-style-type: decimal !important;
+    padding-left: 1.75rem !important;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .markdown-body li {
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+    color: #e2e8f0;
+  }
+
+  .markdown-body li::marker {
+    color: #38bdf8;
+  }
+
+  .markdown-body code {
+    background-color: #0f172a !important;
+    color: #38bdf8 !important;
+    border: 1px solid #334155 !important;
+    border-radius: 0.375rem;
+    padding: 0.15em 0.4em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85em;
+  }
+
+  .markdown-body pre {
+    background-color: #090d16 !important;
+    border: 1px solid #334155 !important;
+    border-radius: 0.5rem;
+    padding: 1rem !important;
+    overflow-x: auto;
+    margin-top: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .markdown-body pre code {
+    background-color: transparent !important;
+    border: none !important;
+    color: #e2e8f0 !important;
+    padding: 0 !important;
+    font-size: 0.9em;
+  }
+
+  .markdown-body blockquote {
+    border-left: 4px solid #38bdf8;
+    background-color: #1e293b;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    border-radius: 0 0.5rem 0.5rem 0;
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  .markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    display: block;
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    border: 1px solid #334155;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    border: 1px solid #334155;
+    padding: 0.65rem 1rem;
+    text-align: left;
+  }
+
+  .markdown-body th {
+    background-color: #1e293b;
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .markdown-body tr:nth-child(even) {
+    background-color: rgba(30, 41, 59, 0.4);
+  }
+
+  .markdown-body a {
+    color: #38bdf8;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .markdown-body a:hover {
+    color: #7dd3fc;
+  }
+
+  .markdown-body strong {
+    color: #f8fafc;
+    font-weight: 600;
+  }
+
+  .markdown-body hr {
+    border-color: #334155;
+    margin: 2rem 0;
+  }
+</style>

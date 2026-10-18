@@ -1,0 +1,183 @@
+# Build the dashboard and publish it to Cloudflare Pages.
+#
+# Every input below is optional, and set under Settings → Secrets and
+# variables → Actions:
+#
+#   CLOUDFLARE_API_TOKEN   (secret)   - a token with the "Cloudflare Pages: Edit"
+#   CLOUDFLARE_ACCOUNT_ID  (secret)     permission, and the account the Pages
+#                                       project lives in. With both set, the
+#                                       last step deploys; without them it is
+#                                       skipped and the job stays green.
+#   CONFIDENTIAL_TERMS     (secret)   - the forbidden-term list
+#                                       test/confidentiality.test.ts scans for.
+#                                       One term per line; blank lines and lines
+#                                       starting with # are skipped; a term
+#                                       shorter than 3 characters is refused.
+#                                       Without it the scan looks for secrets
+#                                       only.
+#   REQUIRE_CONFIDENTIAL_TERMS (variable) - set to `true` to make the Test step
+#                                       fail when CONFIDENTIAL_TERMS is missing.
+#
+# The Pages project itself (`agrav-bench`, named in website/wrangler.toml and
+# below) is created once by hand - see website/DEPLOYMENT.md.
+#
+# What this workflow deliberately does NOT do:
+#
+# - It never runs the benchmark matrix. Attempts need the Antigravity CLI signed
+#   in, a Docker harness and a slice of a weekly quota; they are run by hand.
+# - It never runs `npm run screenshots`. That needs a browser and tens of minutes
+#   per attempt, so the PNGs and website/src/data/screenshot-hashes.json are
+#   captured locally and committed.
+# - It never commits anything back. `npm run build` runs process-results first,
+#   which stamps a fresh `generatedAt` into website/src/data/results.json AND
+#   website/public/api/leaderboard.json — both tracked — on every invocation, so
+#   the checkout is always two timestamp lines, in two files, dirty by the time
+#   astro build runs. That is a build artefact of an ephemeral runner, not a
+#   change: it is deployed and thrown away with the workspace. No step compares
+#   the tree against HEAD, so nothing here can fail on, or auto-commit, that
+#   timestamp. The committed results.json stays the reproducible input; the
+#   scores in it only move when a CSV under eval-results/ does.
+
+name: Publish Website
+
+on:
+  push:
+    branches:
+      - main
+  # A manual run from the Actions tab, e.g. the first deploy after the
+  # Cloudflare secrets are set.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The confidentiality test (test/confidentiality.test.ts) scans the
+          # whole history of every ref: each reachable blob's content, every
+          # path any commit recorded, every commit's message and identities,
+          # and every ref's name, tagger and message. A shallow or
+          # single-branch checkout would leave it the tip commit to look at and
+          # report a clean history it never read.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Matches the repo's toolchain: Node 24, npm 11.
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            website/package-lock.json
+
+      # The root `npm ci` already installs website/ through the root package's
+      # `postinstall` — that is what makes a fresh clone buildable at all, since
+      # `npm run build` cds into website/. The second line is kept deliberately:
+      # it is idempotent, and it means this job still installs everything if the
+      # postinstall is ever removed.
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix website ci
+
+      # This pipeline can publish, so it runs the repo's own gates before it
+      # does. `eslint src/` below sees only website/src - it never
+      # looks at scripts/ or eval-attempts/, where the data pipeline lives - so
+      # without these two steps a push could deploy with the whole test suite
+      # red. Both must stay AFTER "Install dependencies": the root `tsc` reaches
+      # into website/src/components/comparisonUtils.ts through
+      # test/website-contracts.test.ts, so it needs website/node_modules. Neither
+      # step needs a browser: playwright declares no install script, so `npm ci`
+      # downloads no browser binaries and no test launches one.
+      - name: Typecheck
+        run: npm run typecheck
+
+      # CONFIDENTIAL_TERMS (a repository secret) is what lets the
+      # confidentiality test's forbidden-term scan run in CI, where the
+      # gitignored .confidential-terms never exists. Without it the test warns
+      # and scans for secrets only - unless the repository variable
+      # REQUIRE_CONFIDENTIAL_TERMS is `true`, which makes it fail instead.
+      - name: Test
+        run: npm test
+        env:
+          CONFIDENTIAL_TERMS: ${{ secrets.CONFIDENTIAL_TERMS }}
+          REQUIRE_CONFIDENTIAL_TERMS: ${{ vars.REQUIRE_CONFIDENTIAL_TERMS }}
+
+      # The spec files the benchmark page renders are this repository's own,
+      # read off disk on purpose: fetching them from raw.githubusercontent at
+      # build time would make a build depend on someone else's default
+      # branch. Scoped to
+      # tracked files - the unscoped form matches inside
+      # website/node_modules and would fail on a dependency's README.
+      - name: Check nothing is fetched at build time
+        run: |
+          # `git grep -l`, not `ls-files | xargs grep`: a path with a space or a
+          # non-ASCII byte was split or C-quoted, grep exited 2 on the pieces,
+          # and `|| true` turned that into a pass. Exit 0 = match, 1 = none,
+          # anything else = grep itself failed. The step runs under `bash -e`,
+          # so the status is captured rather than left to kill the shell.
+          set +e
+          matches="$(git grep -l -F -e 'raw.githubusercontent' -- website/)"
+          status=$?
+          set -e
+          if [ "$status" -gt 1 ]; then
+            echo "git grep failed (exit $status) while checking tracked website files."
+            exit 1
+          fi
+          if [ "$status" -eq 0 ]; then
+            echo "Build-time fetch found in tracked website files:"
+            echo "$matches"
+            exit 1
+          fi
+
+      - name: Lint website
+        run: npm run lint
+        working-directory: website
+
+      # Regenerates results.json and leaderboard.json from the committed CSVs,
+      # then builds the static site. Succeeds with zero scored attempts: the
+      # empty results.json is committed so the dashboard builds before the first
+      # benchmark run.
+      - name: Build website
+        run: npm run build
+
+      # `secrets` cannot be read in a step's `if:`, so this step turns "are both
+      # Cloudflare secrets set?" into an output the deploy step can test. It
+      # sees only that boolean, never a secret's value. A fork without them
+      # builds everything and skips the deploy.
+      - name: Check for Cloudflare credentials
+        id: cloudflare
+        env:
+          HAS_CREDENTIALS: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: echo "deploy=$HAS_CREDENTIALS" >> "$GITHUB_OUTPUT"
+
+      # Pinned by commit SHA, not by tag. This is the only third-party action in
+      # the file and the only step that sees CLOUDFLARE_API_TOKEN (Pages: Edit),
+      # so a mutable tag would mean whoever can move `v3` in that repository can
+      # run arbitrary code in a job holding the token. actions/checkout and
+      # actions/setup-node above are first-party and conventionally left on
+      # major tags. To bump: resolve the new tag to a SHA
+      # (`gh api repos/cloudflare/wrangler-action/git/ref/tags/<tag>`) and
+      # update both the SHA and the comment.
+      - name: Deploy to Cloudflare Pages
+        if: steps.cloudflare.outputs.deploy == 'true'
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # wrangler-action declares no default for wranglerVersion, so without
+          # this it installs whatever it resolves at run time - not the wrangler
+          # this repo pins and whose `pages deploy` semantics (and
+          # pages_build_output_dir handling) were checked against. Keep in step
+          # with website/package-lock.json.
+          wranglerVersion: '4.129.0'
+          command: pages deploy dist --project-name=agrav-bench
+          workingDirectory: 'website'

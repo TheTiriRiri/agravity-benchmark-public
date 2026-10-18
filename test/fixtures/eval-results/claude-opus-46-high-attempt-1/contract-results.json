@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "attempt": "claude-opus-46-high-attempt-1",
+  "image": "agrav-bench/harness:2026-09-19@sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "runImage": null,
+  "rubric": "maintenance-console@0000000000aa",
+  "testsCommit": "0000000000000000000000000000000000000000",
+  "testsDirty": false,
+  "ungated": false,
+  "startedAt": "2026-09-20T10:00:00.000Z",
+  "durationMs": 60000,
+  "pipFreeze": [
+    "fastapi==0.115.14",
+    "uvicorn==0.30.6"
+  ],
+  "warnings": [],
+  "boot": {
+    "ok": true,
+    "stage": null,
+    "detail": null
+  },
+  "diagnosis": null,
+  "groups": [
+    {
+      "row": "API contract",
+      "file": "api-contract.test.ts",
+      "max": 2,
+      "total": 24,
+      "passed": 20,
+      "score": 1.67,
+      "timedOut": false,
+      "hookFailed": 0,
+      "notRun": 0,
+      "detail": null,
+      "failed": [
+        {
+          "name": "fixture failure 1",
+          "failureType": "testCodeFailure",
+          "message": "GET /schedule answered 500"
+        },
+        {
+          "name": "fixture failure 2",
+          "failureType": "testCodeFailure",
+          "message": "GET /schedule answered 500"
+        },
+        {
+          "name": "fixture failure 3",
+          "failureType": "testCodeFailure",
+          "message": "GET /schedule answered 500"
+        },
+        {
+          "name": "fixture failure 4",
+          "failureType": "testCodeFailure",
+          "message": "GET /schedule answered 500"
+        }
+      ]
+    },
+    {
+      "row": "Planner: assignment rules",
+      "file": "planner-assignment.test.ts",
+      "max": 2,
+      "total": 12,
+      "passed": 12,
+      "score": 2,
+      "timedOut": false,
+      "hookFailed": 0,
+      "notRun": 0,
+      "detail": null,
+      "failed": []
+    },
+    {
+      "row": "Planner: ordering & determinism",
+      "file": "planner-ordering.test.ts",
+      "max": 1,
+      "total": 11,
+      "passed": 10,
+      "score": 0.91,
+      "timedOut": false,
+      "hookFailed": 0,
+      "notRun": 0,
+      "detail": null,
+      "failed": [
+        {
+          "name": "fixture failure 1",
+          "failureType": "testCodeFailure",
+          "message": "GET /schedule answered 500"
+        }
+      ]
+    },
+    {
+      "row": "Planner: parts & blocking",
+      "file": "planner-parts.test.ts",
+      "max": 2,
+      "total": 11,
+      "passed": 10,
+      "score": 1.82,
+      "timedOut": false,
+      "hookFailed": 0,
+      "notRun": 0,
+      "detail": null,
+      "failed": [
+        {
+          "name": "fixture failure 1",
+          "failureType": "testCodeFailure",
+          "message": "GET /schedule answered 500"
+        }
+      ]
+    }
+  ]
+}

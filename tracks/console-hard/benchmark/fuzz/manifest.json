@@ -1,0 +1,5 @@
+{
+  "files": [
+    { "file": "fuzz.test.ts", "tests": 280, "timeoutMs": 300000 }
+  ]
+}

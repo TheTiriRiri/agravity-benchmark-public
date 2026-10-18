@@ -1,0 +1,6 @@
+{
+  "files": [
+    { "file": "flows.spec.ts", "row": "Frontend E2E: flows", "max": 2, "tests": 10 },
+    { "file": "layout.spec.ts", "row": "Frontend E2E: layout & a11y", "max": 1, "tests": 8 }
+  ]
+}

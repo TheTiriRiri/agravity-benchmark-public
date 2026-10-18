@@ -1,0 +1,10 @@
+{
+  "name": "console-hard-e2e",
+  "private": true,
+  "dependencies": {
+    "playwright": "1.62.1",
+    "@playwright/test": "1.62.1",
+    "@axe-core/playwright": "4.13.0",
+    "axe-core": "4.13.0"
+  }
+}

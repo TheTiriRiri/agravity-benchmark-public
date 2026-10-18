@@ -1,0 +1,425 @@
+{
+  "recordedAt": "2026-09-30T08:11:46.459Z",
+  "seed": 20260921,
+  "generatorVersion": 1,
+  "total": 280,
+  "referencePassed": 280,
+  "fingerprint": "407e7a2340d01decfbda8021ce05e9c81f26e9374bae133e8b16c9a8136be48c",
+  "mutantFailures": {
+    "crew_single": {
+      "total": 30,
+      "byStratum": {
+        "crews-both-technicians": 10,
+        "crews-tie-breaker": 10,
+        "travel-daily-cap": 10
+      }
+    },
+    "crew_check_first_only": {
+      "total": 15,
+      "byStratum": {
+        "crews-both-technicians": 5,
+        "crews-tie-breaker": 10
+      }
+    },
+    "crew_tie_reversed": {
+      "total": 10,
+      "byStratum": {
+        "crews-tie-breaker": 10
+      }
+    },
+    "site_first_only": {
+      "total": 41,
+      "byStratum": {
+        "crews-both-technicians": 10,
+        "crews-tie-breaker": 10,
+        "multi-site-qualification": 5,
+        "travel-daily-cap": 10,
+        "preemption-edf-observable": 6
+      }
+    },
+    "travel_off": {
+      "total": 17,
+      "byStratum": {
+        "crews-both-technicians": 5,
+        "travel-matrix-consecutive": 2,
+        "travel-daily-cap": 10
+      }
+    },
+    "travel_cap_off": {
+      "total": 5,
+      "byStratum": {
+        "travel-daily-cap": 5
+      }
+    },
+    "travel_previous_only": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "absence_ignored": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "absence_touch_blocks": {
+      "total": 5,
+      "byStratum": {
+        "absence-and-holiday-slots": 5
+      }
+    },
+    "holiday_ignored": {
+      "total": 5,
+      "byStratum": {
+        "absence-and-holiday-slots": 5
+      }
+    },
+    "split_eager": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "split_min_ignored": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "split_short_first": {
+      "total": 10,
+      "byStratum": {
+        "split-placement-and-key": 10
+      }
+    },
+    "preempt_unfiltered": {
+      "total": 4,
+      "byStratum": {
+        "preemption-edf-observable": 4
+      }
+    },
+    "preempt_evict_all": {
+      "total": 2,
+      "byStratum": {
+        "preemption-edf-observable": 2
+      }
+    },
+    "preempt_parts_after": {
+      "total": 2,
+      "byStratum": {
+        "preemption-edf-observable": 2
+      }
+    },
+    "preempt_no_reprocess": {
+      "total": 8,
+      "byStratum": {
+        "preemption-edf-observable": 8
+      }
+    },
+    "preempt_reprocess_each_round": {
+      "total": 2,
+      "byStratum": {
+        "preemption-edf-observable": 2
+      }
+    },
+    "edf_priority_first": {
+      "total": 8,
+      "byStratum": {
+        "preemption-edf-observable": 8
+      }
+    },
+    "default_error_body": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "parts_without_derived": {
+      "total": 65,
+      "byStratum": {
+        "candidate-other-week-untouched": 10,
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 10
+      }
+    },
+    "site_filter_ignored": {
+      "total": 0,
+      "byStratum": {}
+    },
+    "reset_keeps_parts": {
+      "total": 68,
+      "byStratum": {
+        "candidate-other-week-untouched": 9,
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 10,
+        "preemption-edf-observable": 4
+      }
+    },
+    "skill_off": {
+      "total": 219,
+      "byStratum": {
+        "candidate-window-overlap": 10,
+        "candidate-other-week-untouched": 9,
+        "candidate-terminal-excluded": 8,
+        "bulk-reset-releases": 10,
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 10,
+        "order-by-due-date": 10,
+        "order-by-priority": 10,
+        "order-by-id": 10,
+        "parts-blocked": 6,
+        "parts-consumed-in-order": 9,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 8,
+        "daily-cap-480": 10,
+        "choice-earliest-then-lowest-id": 5,
+        "no-capacity": 10,
+        "transition-stock-effects": 4,
+        "crews-both-technicians": 10,
+        "multi-site-qualification": 5,
+        "travel-matrix-consecutive": 10,
+        "travel-daily-cap": 10,
+        "absence-and-holiday-slots": 5,
+        "split-placement-and-key": 10,
+        "preemption-edf-observable": 10
+      }
+    },
+    "site_off": {
+      "total": 85,
+      "byStratum": {
+        "candidate-window-overlap": 10,
+        "bulk-reset-releases": 2,
+        "fixed-load-blocks-overlap": 5,
+        "order-by-due-date": 6,
+        "order-by-priority": 7,
+        "order-by-id": 4,
+        "parts-blocked": 1,
+        "parts-consumed-in-order": 3,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 4,
+        "slot-window-clipping": 2,
+        "choice-earliest-then-lowest-id": 3,
+        "no-capacity": 3,
+        "multi-site-qualification": 5,
+        "travel-daily-cap": 10,
+        "preemption-edf-observable": 10
+      }
+    },
+    "shift_ignored": {
+      "total": 5,
+      "byStratum": {
+        "slot-grid-and-shift": 5
+      }
+    },
+    "span_days": {
+      "total": 5,
+      "byStratum": {
+        "slot-grid-and-shift": 5
+      }
+    },
+    "overlap_allowed": {
+      "total": 118,
+      "byStratum": {
+        "bulk-reset-releases": 5,
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 5,
+        "order-by-due-date": 10,
+        "order-by-priority": 10,
+        "order-by-id": 10,
+        "slot-grid-and-shift": 10,
+        "daily-cap-480": 5,
+        "choice-earliest-then-lowest-id": 10,
+        "no-capacity": 10,
+        "crews-both-technicians": 5,
+        "travel-matrix-consecutive": 10,
+        "travel-daily-cap": 10,
+        "preemption-edf-observable": 8
+      }
+    },
+    "cap_off": {
+      "total": 20,
+      "byStratum": {
+        "fixed-load-counts-to-cap": 5,
+        "daily-cap-480": 5,
+        "travel-daily-cap": 5,
+        "split-placement-and-key": 5
+      }
+    },
+    "fixed_load_ignored": {
+      "total": 39,
+      "byStratum": {
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 3,
+        "preemption-edf-observable": 6
+      }
+    },
+    "window_unclipped": {
+      "total": 20,
+      "byStratum": {
+        "slot-window-clipping": 10,
+        "preemption-edf-observable": 10
+      }
+    },
+    "not_earliest": {
+      "total": 230,
+      "byStratum": {
+        "candidate-other-week-untouched": 10,
+        "candidate-terminal-excluded": 10,
+        "bulk-reset-releases": 10,
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 10,
+        "order-by-due-date": 10,
+        "order-by-priority": 10,
+        "order-by-id": 10,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 7,
+        "daily-cap-480": 10,
+        "choice-earliest-then-lowest-id": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 8,
+        "crews-both-technicians": 10,
+        "crews-tie-breaker": 10,
+        "multi-site-qualification": 10,
+        "travel-matrix-consecutive": 10,
+        "travel-daily-cap": 10,
+        "absence-and-holiday-slots": 5,
+        "preemption-edf-observable": 10
+      }
+    },
+    "other_weeks_pulled": {
+      "total": 10,
+      "byStratum": {
+        "candidate-other-week-untouched": 10
+      }
+    },
+    "priority_ignored": {
+      "total": 10,
+      "byStratum": {
+        "order-by-priority": 10
+      }
+    },
+    "due_date_ignored": {
+      "total": 18,
+      "byStratum": {
+        "order-by-due-date": 10,
+        "preemption-edf-observable": 8
+      }
+    },
+    "id_order_reversed": {
+      "total": 12,
+      "byStratum": {
+        "order-by-id": 10,
+        "preemption-edf-observable": 2
+      }
+    },
+    "tech_tie_reversed": {
+      "total": 10,
+      "byStratum": {
+        "choice-earliest-then-lowest-id": 6,
+        "preemption-edf-observable": 4
+      }
+    },
+    "reset_interleaved": {
+      "total": 10,
+      "byStratum": {
+        "bulk-reset-releases": 10
+      }
+    },
+    "parts_check_off": {
+      "total": 39,
+      "byStratum": {
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10,
+        "preemption-edf-observable": 4
+      }
+    },
+    "no_reservation": {
+      "total": 67,
+      "byStratum": {
+        "candidate-other-week-untouched": 10,
+        "bulk-reset-releases": 5,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "no-capacity": 10,
+        "replan-determinism": 10,
+        "transition-stock-effects": 8,
+        "preemption-edf-observable": 4
+      }
+    },
+    "complete_keeps_reserved": {
+      "total": 2,
+      "byStratum": {
+        "transition-stock-effects": 2
+      }
+    },
+    "cancel_always_releases": {
+      "total": 2,
+      "byStratum": {
+        "transition-stock-effects": 2
+      }
+    },
+    "cancel_keeps_slot": {
+      "total": 4,
+      "byStratum": {
+        "transition-stock-effects": 4
+      }
+    },
+    "start_consumes": {
+      "total": 5,
+      "byStratum": {
+        "transition-stock-effects": 5
+      }
+    },
+    "complete_keeps_on_hand": {
+      "total": 2,
+      "byStratum": {
+        "transition-stock-effects": 2
+      }
+    },
+    "cancel_keeps_reservation": {
+      "total": 4,
+      "byStratum": {
+        "transition-stock-effects": 4
+      }
+    },
+    "hardcoded_plan": {
+      "total": 268,
+      "byStratum": {
+        "candidate-window-overlap": 10,
+        "candidate-other-week-untouched": 10,
+        "candidate-terminal-excluded": 10,
+        "bulk-reset-releases": 10,
+        "fixed-load-blocks-overlap": 10,
+        "fixed-load-counts-to-cap": 10,
+        "order-by-due-date": 10,
+        "order-by-priority": 10,
+        "order-by-id": 10,
+        "parts-blocked": 10,
+        "parts-consumed-in-order": 10,
+        "parts-before-technician": 10,
+        "no-qualified-technician": 10,
+        "slot-grid-and-shift": 10,
+        "slot-window-clipping": 10,
+        "daily-cap-480": 10,
+        "choice-earliest-then-lowest-id": 10,
+        "no-capacity": 10,
+        "transition-stock-effects": 8,
+        "crews-both-technicians": 10,
+        "crews-tie-breaker": 10,
+        "multi-site-qualification": 10,
+        "travel-matrix-consecutive": 10,
+        "travel-daily-cap": 10,
+        "absence-and-holiday-slots": 10,
+        "split-placement-and-key": 10,
+        "preemption-edf-observable": 10
+      }
+    }
+  }
+}

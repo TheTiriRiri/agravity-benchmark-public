@@ -1,0 +1,14 @@
+{
+  "status": "ERROR",
+  "num_turns": 1,
+  "duration_seconds": 1950.0,
+  "usage": {
+    "input_tokens": 190000,
+    "output_tokens": 110000,
+    "cache_read_tokens": 10000000,
+    "thinking_tokens": 0,
+    "total_tokens": 300000
+  },
+  "conversation_id": "f1f1f1f1-0000-4000-8000-000000000001",
+  "error": "There was a network issue connecting to the server, please try again."
+}

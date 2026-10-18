@@ -1,0 +1,3 @@
+Antigravity CLI 1.1.26
+notice: tool "Bash(npm install)" was soft-denied by settings.json permissions; add an allow rule for Bash(npm install:*) to permit it
+continuing without the tool result

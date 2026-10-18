@@ -1,0 +1,21 @@
+{
+  // The repeatable typecheck gate for `website/`: `npm run typecheck`, which
+  // the repo-root `npm run typecheck` also calls.
+  //
+  // It covers the React/TypeScript surface only. `.astro` files are excluded
+  // because `tsc` cannot parse them, and checking them would mean adding
+  // `@astrojs/check` — a dependency this repo does not take (Ruling R13). Their
+  // frontmatter therefore stays unchecked; that is the accepted cost.
+  //
+  // What this does buy: `src/data/types.ts` imports `ModelPricing` from
+  // `eval-attempts/metadata.ts` across the package boundary, as the brief
+  // requires. Renaming that type, or adding a field to it, now turns this gate
+  // red instead of shipping a dashboard whose types no longer describe the data
+  // it renders.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["dist", "node_modules"]
+}

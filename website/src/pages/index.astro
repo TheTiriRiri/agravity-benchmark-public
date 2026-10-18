@@ -1,0 +1,152 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ResultsDashboard from '../components/ResultsDashboard';
+import resultsData from '../data/results.json';
+import resultsHardData from '../data/results-hard.json';
+import resultsBrownfieldData from '../data/results-brownfield.json';
+import screenshotHashes from '../data/screenshot-hashes.json';
+import type {ProcessedResults} from '../data/types';
+
+// Hard screenshot hashes — may not exist yet; default to empty object.
+let hardScreenshotHashes: Record<string, string> = {};
+try {
+  hardScreenshotHashes = (await import('../data/screenshot-hashes-hard.json')).default;
+} catch {
+  // No hard screenshots yet — this is expected before the first hard run.
+}
+
+// Brownfield screenshot hashes — may not exist yet; default to empty object.
+let brownfieldScreenshotHashes: Record<string, string> = {};
+try {
+  brownfieldScreenshotHashes = (await import('../data/screenshot-hashes-brownfield.json')).default;
+} catch {
+  // No brownfield screenshots yet — this is expected before the first brownfield run.
+}
+
+const title = 'agrav-bench — Antigravity CLI coding benchmark';
+const description =
+  'How Antigravity CLI models perform when each gets a single shot at building the Meridian Maintenance Console: a FastAPI backend, a React frontend, and a planner scored by hidden API tests.';
+
+// The import is inferred from whatever `process-results.ts` last wrote, which
+// is `{ results: [], ... }` in the committed empty state. The cast restates the
+// contract that script exports; `src/data/types.ts` is the single copy of it.
+const results = resultsData as unknown as ProcessedResults;
+const hardResults = resultsHardData as unknown as ProcessedResults;
+const brownfieldResults = resultsBrownfieldData as unknown as ProcessedResults;
+
+// Sort attempts by their configuration's average (best first), then by attempt
+// number. Keyed on `modelBaseId`, never on the display name: two rows can share
+// a name, and a name-keyed map would silently mix them.
+const modelAverageMap = new Map(
+  results.modelAverages.map((avg) => [avg.modelBaseId, avg.averagePercentage])
+);
+
+const sortedResults = [...results.results].sort((a, b) => {
+  const avgA = modelAverageMap.get(a.modelBaseId) ?? 0;
+  const avgB = modelAverageMap.get(b.modelBaseId) ?? 0;
+
+  if (avgA !== avgB) {
+    return avgB - avgA;
+  }
+  return a.attemptNumber - b.attemptNumber;
+});
+
+// Sort hard results the same way
+const hardAverageMap = new Map(
+  hardResults.modelAverages.map((avg) => [avg.modelBaseId, avg.averagePercentage])
+);
+
+const hardSortedResults = [...hardResults.results].sort((a, b) => {
+  const avgA = hardAverageMap.get(a.modelBaseId) ?? 0;
+  const avgB = hardAverageMap.get(b.modelBaseId) ?? 0;
+
+  if (avgA !== avgB) {
+    return avgB - avgA;
+  }
+  return a.attemptNumber - b.attemptNumber;
+});
+
+// Sort brownfield results the same way
+const brownfieldAverageMap = new Map(
+  brownfieldResults.modelAverages.map((avg) => [avg.modelBaseId, avg.averagePercentage])
+);
+
+const brownfieldSortedResults = [...brownfieldResults.results].sort((a, b) => {
+  const avgA = brownfieldAverageMap.get(a.modelBaseId) ?? 0;
+  const avgB = brownfieldAverageMap.get(b.modelBaseId) ?? 0;
+
+  if (avgA !== avgB) {
+    return avgB - avgA;
+  }
+  return a.attemptNumber - b.attemptNumber;
+});
+
+// The hero counts every track, not only the classic one the page opens on.
+const allTracks = [results, hardResults, brownfieldResults];
+const totalAttempts = allTracks.reduce((sum, track) => sum + track.totalAttempts, 0);
+const hasResults = totalAttempts > 0;
+const latestGeneratedAt = allTracks
+  .filter((track) => track.totalAttempts > 0)
+  .map((track) => track.generatedAt)
+  .reduce((latest, at) => (at > latest ? at : latest), results.generatedAt);
+const generatedAt = new Date(latestGeneratedAt).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<Layout title={title} description={description}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Hero Section -->
+    <div class="mb-12">
+      <h1 class="text-2xl md:text-4xl font-bold text-slate-100 mb-4">agrav-bench Results</h1>
+      <p class="text-lg text-slate-300 mb-2">
+        How Antigravity CLI models one-shot a full-stack maintenance-planning app: FastAPI + React, scored by hidden API tests and a judge.
+        Every <code class="text-slate-200">(model, --effort)</code> pair is its own benchmark row.
+      </p>
+      <p class="text-sm text-slate-400">
+        {totalAttempts} evaluated attempts across three tracks • Last updated {generatedAt}
+      </p>
+    </div>
+
+    {!hasResults && (
+      <div class="mb-12 rounded-lg border border-slate-700 bg-slate-800 p-6">
+        <h2 class="text-lg font-semibold text-slate-100">No results yet</h2>
+        <p class="mt-2 text-sm text-slate-300">
+          The matrix has not been run. The dashboard is built from
+          <code class="text-slate-200">eval-results/&lt;id&gt;-attempt-&lt;n&gt;/</code>, so it renders empty
+          until an attempt exists — which is also what CI builds before the first run.
+        </p>
+        <ol class="mt-4 list-decimal space-y-1 pl-5 text-sm text-slate-400">
+          <li><code class="text-slate-300">npm run run-matrix -- --only &lt;id&gt; --attempts &lt;n&gt;</code> to produce attempts</li>
+          <li>Score each one with the <code class="text-slate-300">agrav-score-attempt</code> skill</li>
+          <li><code class="text-slate-300">npm run process-results</code> to regenerate this page's data</li>
+        </ol>
+        <p class="mt-4 text-sm text-slate-400">
+          See the <a href="/benchmark" class="text-blue-400 underline hover:text-blue-300">benchmark page</a> for the
+          exact prompt and scoring criteria.
+        </p>
+      </div>
+    )}
+
+    <!-- Results Dashboard: flat / grouped-by-family toggle, "Only latest models" toggle -->
+    <ResultsDashboard
+      client:load
+      modelAverages={results.modelAverages}
+      familyAverages={results.familyAverages ?? []}
+      sortedResults={sortedResults}
+      supersededModels={results.supersededModels ?? {}}
+      screenshotHashes={screenshotHashes}
+      hardModelAverages={hardResults.modelAverages}
+      hardFamilyAverages={hardResults.familyAverages ?? []}
+      hardSortedResults={hardSortedResults}
+      hardScreenshotHashes={hardScreenshotHashes}
+      brownfieldModelAverages={brownfieldResults.modelAverages}
+      brownfieldFamilyAverages={brownfieldResults.familyAverages ?? []}
+      brownfieldSortedResults={brownfieldSortedResults}
+      brownfieldScreenshotHashes={brownfieldScreenshotHashes}
+    />
+
+  </div>
+</Layout>

@@ -1,0 +1,14 @@
+{
+  "name": "agrav-bench - Antigravity CLI coding benchmark",
+  "short_name": "agrav-bench",
+  "description": "One-shot coding benchmark comparing Antigravity CLI models on the same full-stack application task.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "/favicon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/favicon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" }
+  ]
+}

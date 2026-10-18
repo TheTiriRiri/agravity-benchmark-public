@@ -1,0 +1,14 @@
+{
+  "status": "ERROR",
+  "num_turns": 1,
+  "duration_seconds": 1600.0,
+  "usage": {
+    "input_tokens": 240000,
+    "output_tokens": 105000,
+    "cache_read_tokens": 6000000,
+    "thinking_tokens": 0,
+    "total_tokens": 345000
+  },
+  "conversation_id": "f1f1f1f1-0000-4000-8000-000000000002",
+  "error": "Your previous response was cut off because it exceeded the output token limit\nPlease continue from where you left off, keeping your response shorter\nRetries remaining: 3"
+}

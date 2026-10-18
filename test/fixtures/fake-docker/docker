@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# A stand-in for `docker`, so the runner can be driven end to end without a
+# daemon, a container, an agy binary or a slice of the weekly quota.
+#
+# The runner is the least-tested component in this repo precisely because
+# testing it used to need a real container. It does not: every docker
+# invocation run-matrix.ts makes is `spawnSync("docker", …)`, so a script of
+# this name earlier on PATH is enough to exercise signal handling, container
+# cleanup, workspace resetting and the resume rule for real.
+#
+# Steered by the environment:
+#   FAKE_ATTEMPT_SLEEP  seconds the attempt container "runs"     (default 20)
+#   FAKE_RM_STATUS      exit status for `docker rm -f`           (default 0)
+#   FAKE_MARKER         extra file the attempt writes into /workspace
+#   FAKE_STDERR         line the attempt prints to stderr
+#   FAKE_LOG            file every invocation is appended to
+#   FAKE_REFRESH_TOKEN  set: the /usage call rewrites the token, as agy's first call does (gate 0)
+#   FAKE_RUN_JSON       path checked when the token is copied back onto the volume
+#   FAKE_ENVELOPE_INTERRUPTED  set: the attempt emits agy's "interrupted" ERROR envelope and exits 0
+#   FAKE_SIGNAL_PARENT  signal name: the attempt sends it to the RUNNER ALONE (kill -N $PPID)
+#                       and then exits normally, so nothing reaches this child — the shape of
+#                       `kill <pid>` or a supervisor's SIGTERM, which Ctrl-C's process group never has
+#   FAKE_SIGNAL_USAGE   as above, but sent from the /usage call, before any attempt container
+#   FAKE_ATTEMPT_STARTED  file the attempt container touches the moment it starts, so a test can
+#                       wait for the container instead of guessing at a delay
+set -u
+
+[[ -n "${FAKE_LOG:-}" ]] && printf 'docker %s\n' "$*" >>"$FAKE_LOG"
+
+case "${1:-}" in
+  volume)  exit 0 ;;
+  image)   echo "sha256:0000000000000000000000000000000000000000000000000000000000000000"; exit 0 ;;
+  rm)      exit "${FAKE_RM_STATUS:-0}" ;;
+  inspect) echo "true"; exit 0 ;;
+  run)     : ;;
+  *)       exit 0 ;;
+esac
+
+args=("$@")
+dst=""; workspace=""; home=""; mode=""; sources=()
+for ((i = 0; i < ${#args[@]}; i++)); do
+  case "${args[i]}" in
+    -v)
+      case "${args[i+1]}" in
+        *:/dst)       dst="${args[i+1]%:/dst}" ;;
+        *:/workspace) workspace="${args[i+1]%:/workspace}" ;;
+        *:/home/agy)  home="${args[i+1]%:/home/agy}" ;;
+      esac ;;
+    --entrypoint) [[ "${args[i+1]}" == cp ]] && mode="cp" ;;
+    --usage)      mode="usage" ;;
+    --model)      mode="attempt" ;;
+    # cp's sources, as run-matrix passes them: everything after `--parents` up
+    # to the trailing `/dst/`. They are relative to the volume root, so
+    # `--parents` reproduces agy's own .gemini/antigravity-cli/ layout under
+    # /dst — a flat copy would put the token where agy never reads it.
+    --parents)
+      for ((j = i + 1; j < ${#args[@]} - 1; j++)); do sources+=("${args[j]}"); done ;;
+  esac
+done
+
+case "$mode" in
+  cp)
+    # The copy-back of a refreshed token has the volume itself as /dst.
+    if [[ "$dst" == "agy-creds" ]]; then
+      [[ -f "${FAKE_RUN_JSON:-}" ]] && echo "token copied back after run.json was written" >>"${FAKE_LOG:-/dev/null}"
+      exit 0
+    fi
+    if [[ -n "$dst" ]]; then
+      for src in "${sources[@]}"; do
+        mkdir -p "$dst/$(dirname "$src")"
+        : >"$dst/$src"
+      done
+    fi
+    exit 0 ;;
+  usage)
+    [[ -n "${FAKE_REFRESH_TOKEN:-}" ]] && printf 'refreshed\n' >"$home/.gemini/antigravity-cli/antigravity-oauth-token"
+    if [[ -n "${FAKE_SIGNAL_USAGE:-}" ]]; then
+      kill -"$FAKE_SIGNAL_USAGE" "$PPID"
+      sleep 1
+    fi
+    # The table agy really prints (images/harness/IMAGE.md), one row per model
+    # runner.yaml names in a usageLabel, so a numeric quotaFloor finds its bucket.
+    printf 'All Models\tGemini 3.8 Flash (High)\t87%%\t2030-03-04T09:20:11Z\n'
+    printf 'All Models\tGemini 3.1 Pro (High)\t87%%\t2030-03-04T11:42:05Z\n'
+    printf 'All Models\tClaude Sonnet 4.6 (Thinking)\t87%%\t2030-03-04T08:05:37Z\n'
+    printf 'All Models\tClaude Opus 4.6 (Thinking)\t87%%\t2030-03-04T08:05:37Z\n'
+    exit 0 ;;
+  attempt)
+    # Written first: a test that signals "while the container runs" waits for
+    # this rather than for a clock, which under load fires before the run gets here.
+    [[ -n "${FAKE_ATTEMPT_STARTED:-}" ]] && : >"$FAKE_ATTEMPT_STARTED"
+    if [[ -n "${FAKE_SIGNAL_PARENT:-}" ]]; then
+      kill -"$FAKE_SIGNAL_PARENT" "$PPID"
+      sleep 1
+    fi
+    sleep "${FAKE_ATTEMPT_SLEEP:-20}"
+    if [[ -n "$workspace" ]]; then
+      mkdir -p "$workspace"
+      printf '{"name":"site"}\n' >"$workspace/package.json"
+      [[ -n "${FAKE_MARKER:-}" ]] && printf 'written by this run\n' >"$workspace/${FAKE_MARKER}"
+    fi
+    [[ -n "${FAKE_STDERR:-}" ]] && printf '%s\n' "$FAKE_STDERR" >&2
+    # When FAKE_ENVELOPE_INTERRUPTED is set, emit the ERROR envelope agy writes
+    # when it catches SIGINT inside the container: status ERROR, error
+    # "interrupted", clean exit 0. This is the exact shape of the bug —
+    # detectInterrupt sees nothing because signal is null and exit code is 0.
+    if [[ -n "${FAKE_ENVELOPE_INTERRUPTED:-}" ]]; then
+      printf '{"conversation_id":"c1","status":"ERROR","response":"","error":"interrupted","duration_seconds":142.7,"num_turns":12,"usage":{"input_tokens":85000,"output_tokens":22000,"thinking_tokens":8000,"cache_read_tokens":40000,"total_tokens":107000}}\n'
+      exit 0
+    fi
+    printf '{"subtype":"success","num_turns":3,"duration_ms":1000,"usage":{"input_tokens":10,"output_tokens":5,"cache_read_tokens":0,"reasoning_tokens":0,"total_tokens":15},"conversation_id":"c1"}\n'
+    exit 0 ;;
+  *)
+    exit 0 ;;
+esac
