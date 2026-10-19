@@ -51,8 +51,7 @@ docker build -t agrav-bench/harness:2026-10-04 images/harness
 
 1. **Sign `agy` in, inside the container, once.** This is the one step that cannot be
    automated. The full procedure, with its fallbacks and the checks that it worked,
-   is in [docs/INSTRUKCJA-UZYTKOWNIKA.md](docs/INSTRUKCJA-UZYTKOWNIKA.md) §7 (in
-   Polish). In outline:
+   is in [docs/OPERATOR-GUIDE.md](docs/OPERATOR-GUIDE.md) §7. In outline:
    ```bash
    docker run -it --pull never --user "$(id -u):$(id -g)" -e HOME=/home/agy -w /home/agy \
        -v agy-creds:/home/agy agrav-bench/harness:2026-10-04 --login
@@ -119,7 +118,7 @@ eval-results/    classic results, one directory per attempt, created by a run:
                  eval-results.csv (judge)
 website/         Astro 5 dashboard; reads src/data/results*.json and, at build
                  time, each track's prompt, criteria and runner off disk
-docs/            INSTRUKCJA-UZYTKOWNIKA.md, the operator's guide (Polish)
+docs/            OPERATOR-GUIDE.md, the operator's guide
 .claude/skills/  the hybrid judges, one per track: agrav-score-attempt,
                  agrav-score-hard, agrav-score-brownfield
 ```
@@ -330,4 +329,4 @@ inside `website/node_modules` and fails on a dependency's README.
   `/THIRD_PARTY_NOTICES.txt`, linked from its footer.
 - Harness image and the `agy` build it pins: `images/harness/IMAGE.md`.
 - Deployment: `website/DEPLOYMENT.md`.
-- Operator's guide, step by step (Polish): `docs/INSTRUKCJA-UZYTKOWNIKA.md`.
+- Operator's guide, step by step: `docs/OPERATOR-GUIDE.md`.

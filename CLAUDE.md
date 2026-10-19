@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**agrav-bench** runs models through the Antigravity CLI (`agy`) instead of per-vendor API keys. Each model builds the Meridian Maintenance Console (a FastAPI backend and a React frontend) one-shot from a fixed prompt, is scored against its track's rubric, and the results land on an Astro dashboard. **Each (model, effort) pair is its own benchmark row**, so a model's `--effort` levels can be compared directly. `README.md` is the user-facing overview; `docs/INSTRUKCJA-UZYTKOWNIKA.md` (Polish) is the operator's step-by-step guide, including the `agy` sign-in.
+**agrav-bench** runs models through the Antigravity CLI (`agy`) instead of per-vendor API keys. Each model builds the Meridian Maintenance Console (a FastAPI backend and a React frontend) one-shot from a fixed prompt, is scored against its track's rubric, and the results land on an Astro dashboard. **Each (model, effort) pair is its own benchmark row**, so a model's `--effort` levels can be compared directly. `README.md` is the user-facing overview; `docs/OPERATOR-GUIDE.md` is the operator's step-by-step guide, including the `agy` sign-in.
 
 The repository ships with no results: `eval-attempts/` and `eval-results/` hold only `.gitkeep` and `eval-attempts/metadata.ts`, and the committed `website/src/data/results*.json` are empty.
 

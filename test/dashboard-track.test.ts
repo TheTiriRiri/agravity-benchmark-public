@@ -165,73 +165,73 @@ describe("dashboard track switch", () => {
       const html = readFileSync(htmlPath, "utf8");
 
       // Classic track: 14.0 max, 7 hidden, 1 auto, 6 judge/manual
-      assert.ok(html.includes("14.0 Punktów Max"), "Classic must show 14.0 Punktów Max");
+      assert.ok(html.includes("14.0 Max Points"), "Classic must show 14.0 Max Points");
       assert.match(
         html,
-        /7 pkt z ukrytych testów automatycznych \+ 1 pkt auto \+ 6 pkt z weryfikacji sędziego i testów manualnych człowieka/,
+        /7 pts from hidden automated tests \+ 1 pt auto \+ 6 pts from judge review and human manual testing/,
       );
 
       // Hard track: 19.0 max, 14 hidden, 1 auto, 4 judge/manual
-      assert.ok(html.includes("19.0 Punktów Max"), "Hard must show 19.0 Punktów Max");
+      assert.ok(html.includes("19.0 Max Points"), "Hard must show 19.0 Max Points");
       assert.match(
         html,
-        /14 pkt z ukrytych testów automatycznych i E2E \+ 1 pkt auto \+ 4 pkt sędzia\/człowiek/,
+        /14 pts from hidden automated and E2E tests \+ 1 pt auto \+ 4 pts judge\/human/,
       );
 
       // Brownfield track: 12.0 max, 7 hidden, 2 auto, 3 judge/manual
-      assert.ok(html.includes("12.0 Punktów Max"), "Brownfield must show 12.0 Punktów Max");
+      assert.ok(html.includes("12.0 Max Points"), "Brownfield must show 12.0 Max Points");
       assert.match(
         html,
-        /7 pkt z testów ukrytych \(Regression 4, Change suite 3\) \+ 2 pkt auto \(Local build 1, Diff locality 1\) \+ 3 pkt agent\/człowiek \(Code structure, Self-verification, Visual design\)/,
+        /7 pts from hidden tests \(Regression 4, Change suite 3\) \+ 2 pts auto \(Local build 1, Diff locality 1\) \+ 3 pts agent\/human \(Code structure, Self-verification, Visual design\)/,
       );
 
       // Line counters (wc -l)
-      assert.ok(html.includes("prompt.md • 209 linii"), "prompt.md must show 209 linii");
-      assert.ok(html.includes("criteria.md • 353 linii"), "criteria.md must show 353 linii");
+      assert.ok(html.includes("prompt.md • 209 lines"), "prompt.md must show 209 lines");
+      assert.ok(html.includes("criteria.md • 353 lines"), "criteria.md must show 353 lines");
       assert.ok(
-        html.includes("tracks/brownfield/prompt.md • 60 linii"),
-        "tracks/brownfield/prompt.md must show 60 linii",
+        html.includes("tracks/brownfield/prompt.md • 60 lines"),
+        "tracks/brownfield/prompt.md must show 60 lines",
       );
       assert.ok(
-        html.includes("tracks/brownfield/benchmark/criteria.md • 135 linii"),
-        "criteria.md must show 135 linii",
+        html.includes("tracks/brownfield/benchmark/criteria.md • 135 lines"),
+        "criteria.md must show 135 lines",
       );
 
       // Hard judge section: 14 automated points, not 12
       assert.ok(
-        html.includes("14 punktów testów automatycznych daje sześć plików ukrytych testów kontraktowych"),
+        html.includes("14 automated points come from six hidden contract-test files"),
         "Hard judge section must state 14 points, not 12",
       );
       // The fuzz oracle backs the gates and scores no row.
       assert.ok(!html.includes("differential fuzzing"), "Hard judge section must not credit the fuzz oracle with points");
       assert.ok(
-        !html.includes("12 punktów testów automatycznych"),
-        "Hard judge section must not contain '12 punktów testów automatycznych'",
+        !html.includes("12 automated points"),
+        "Hard judge section must not contain '12 automated points'",
       );
 
       // Brownfield judge section: tool-computed rows
       assert.ok(
-        html.includes("3 wiersze liczone przez narzędzie (contract-results-brownfield)"),
+        html.includes("3 rows computed by the tool (contract-results-brownfield)"),
         "Brownfield judge section must state tool-computed rows",
       );
       assert.ok(
-        !html.includes("3 wiersze automatyczne (Regression: 4 pkt"),
-        "Brownfield judge section must not say '3 wiersze automatyczne'",
+        !html.includes("3 automated rows (Regression: 4 pts"),
+        "Brownfield judge section must not say '3 automated rows'",
       );
 
       // Dynamic row counts from rubric definitions
       const classicHiddenCount = RUBRIC_ROWS.filter((r) => r.scoredBy === "hidden").length;
       const classicHumanCount = RUBRIC_ROWS.filter((r) => r.scoredBy === "human").length;
       assert.ok(
-        html.includes(`${BROWNFIELD_RUBRIC_ROWS.length} wierszy`),
-        `Brownfield section must state ${BROWNFIELD_RUBRIC_ROWS.length} wierszy`,
+        html.includes(`${BROWNFIELD_RUBRIC_ROWS.length} rows of rubric`),
+        `Brownfield section must state ${BROWNFIELD_RUBRIC_ROWS.length} rows of rubric`,
       );
       assert.ok(
-        html.includes(`${classicHiddenCount} wiersze testów ukrytych`),
+        html.includes(`${classicHiddenCount} hidden-test rows`),
         `Classic must show dynamic count of hidden rows (${classicHiddenCount})`,
       );
       assert.ok(
-        html.includes(`${classicHumanCount} wiersze interfejsu`),
+        html.includes(`${classicHumanCount} UI rows`),
         `Classic must show dynamic count of human rows (${classicHumanCount})`,
       );
     } finally {

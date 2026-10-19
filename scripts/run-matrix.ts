@@ -538,7 +538,7 @@ function seedCredentials(image: string, files: string[], where: string): string 
     const detail = result.error !== undefined ? result.error.message : (result.stderr ?? "").trim();
     throw new Error(
       `could not seed credentials from the ${CREDENTIALS_VOLUME} volume: ${detail}\n` +
-        "The agy sign-in (docs/INSTRUKCJA-UZYTKOWNIKA.md §7) creates that volume; check `docker volume ls` and runner.yaml's credentialFiles.",
+        "The agy sign-in (docs/OPERATOR-GUIDE.md §7) creates that volume; check `docker volume ls` and runner.yaml's credentialFiles.",
     );
   }
   return credsDir;
@@ -706,7 +706,7 @@ function requireCredentialsVolume(image: string): void {
   if (result.status === 0) return;
   throw new Error(
     `the ${CREDENTIALS_VOLUME} docker volume does not exist. ` +
-      "The agy sign-in (docs/INSTRUKCJA-UZYTKOWNIKA.md §7) creates it, inside the harness container:\n" +
+      "The agy sign-in (docs/OPERATOR-GUIDE.md §7) creates it, inside the harness container:\n" +
       `  docker run -it --pull never --user ${userSpec()} -e HOME=/home/agy -w /home/agy` +
       ` -v ${CREDENTIALS_VOLUME}:/home/agy ${image} --login`,
   );

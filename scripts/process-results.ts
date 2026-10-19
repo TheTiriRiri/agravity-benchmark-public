@@ -564,7 +564,7 @@ function applyRunJson(
       `warning: ${dirName} — envelope.usage reports 0 input, 0 output and 0 cache-read tokens, so no cost ` +
         `is imputed for ${modelId}. If every attempt does this, agy is not reporting token counts for this ` +
         "account and the cost column cannot be published at all — check one envelope by hand (the smoke test, " +
-        "docs/INSTRUKCJA-UZYTKOWNIKA.md §7.4).",
+        "docs/OPERATOR-GUIDE.md §7.4).",
     );
     return null;
   }
